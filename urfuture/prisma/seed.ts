@@ -137,7 +137,7 @@ async function main() {
       {
         skillId: skills['Algebra & Precalculus'],
         prompt: 'Solve for x: 3x + 7 = 22',
-        choices: JSON.stringify(['x = 5', 'x = 3', 'x = 7', 'x = 15']),
+        choices: ['x = 5', 'x = 3', 'x = 7', 'x = 15'],
         correctIndex: 0,
         difficulty: 'EASY',
         sourceCourse: 'MATH101',
@@ -145,7 +145,7 @@ async function main() {
       {
         skillId: skills['Programming Fundamentals'],
         prompt: 'What data structure uses FIFO (First-In-First-Out) ordering?',
-        choices: JSON.stringify(['Stack', 'Queue', 'Tree', 'Hash Map']),
+        choices: ['Stack', 'Queue', 'Tree', 'Hash Map'],
         correctIndex: 1,
         difficulty: 'EASY',
         sourceCourse: 'CS101',
@@ -153,12 +153,12 @@ async function main() {
       {
         skillId: skills['Statistics & Probability'],
         prompt: 'What does a p-value of 0.03 typically suggest at a 0.05 significance level?',
-        choices: JSON.stringify([
+        choices: [
           'The result is not statistically significant',
           'The result is statistically significant',
           'The sample size was too small',
           'The null hypothesis is definitely true',
-        ]),
+        ],
         correctIndex: 1,
         difficulty: 'MEDIUM',
         sourceCourse: 'STAT201',
@@ -166,7 +166,7 @@ async function main() {
       {
         skillId: skills['Physics'],
         prompt: 'What is the SI unit of electrical resistance?',
-        choices: JSON.stringify(['Volt', 'Ampere', 'Ohm', 'Watt']),
+        choices: ['Volt', 'Ampere', 'Ohm', 'Watt'],
         correctIndex: 2,
         difficulty: 'EASY',
         sourceCourse: 'PHYS102',
@@ -174,7 +174,7 @@ async function main() {
       {
         skillId: skills['Data Structures & Algorithms'],
         prompt: 'What is the average time complexity of binary search on a sorted array?',
-        choices: JSON.stringify(['O(n)', 'O(log n)', 'O(n^2)', 'O(1)']),
+        choices: ['O(n)', 'O(log n)', 'O(n^2)', 'O(1)'],
         correctIndex: 1,
         difficulty: 'MEDIUM',
         sourceCourse: 'CS201',

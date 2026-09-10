@@ -15,11 +15,13 @@ export default function TranscriptUpload({
   const [yearLabel, setYearLabel] = useState(YEAR_OPTIONS[0]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   async function handleUpload() {
     if (!file) return;
     setBusy(true);
     setError(null);
+    setSuccess(null);
     try {
       const form = new FormData();
       form.append('userId', userId);
@@ -29,6 +31,7 @@ export default function TranscriptUpload({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Upload failed');
       onUploaded(data.transcript);
+      setSuccess(`Successfully parsed ${file.name} for ${yearLabel}!`);
       setFile(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Upload failed');
@@ -38,38 +41,92 @@ export default function TranscriptUpload({
   }
 
   return (
-    <div className="card p-4">
-      <h3 className="mb-3 text-sm font-medium text-angkor-maroon">Upload a transcript (Year 1–4)</h3>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <select
-          value={yearLabel}
-          onChange={(e) => setYearLabel(e.target.value)}
-          className="rounded-md border border-black/15 px-2 py-1.5 text-sm"
-        >
-          {YEAR_OPTIONS.map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
-        <input
-          type="file"
-          accept=".pdf,.csv,.txt"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="text-sm"
-        />
-        <button
-          onClick={handleUpload}
-          disabled={!file || busy}
-          className="rounded-md bg-angkor-maroon px-4 py-1.5 text-sm font-medium text-white disabled:opacity-40"
-        >
-          {busy ? 'Uploading…' : 'Upload & parse'}
-        </button>
+    <div className="card-dark p-6 border-[#1b2947] bg-[#0c1426]">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-base font-bold text-white flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#00d2ff]" />
+            Upload Coursework Transcripts
+          </h3>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Upload transcripts from Year 1–4 to generate tailored diagnostic quizzes and verify your skills.
+          </p>
+        </div>
+        <span className="text-[11px] font-semibold text-[#34d399] px-2.5 py-0.5 rounded-full bg-[#064e3b] border border-[#0d6d53]/50">
+          AI Auto-Extraction
+        </span>
       </div>
-      <p className="mt-2 text-xs text-black/50">
-        Upload every year's transcript you have — the diagnostic quiz and skill radar improve as coverage grows.
-      </p>
-      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center mt-2">
+        {/* Year Selector */}
+        <div className="shrink-0">
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+            Academic Term
+          </label>
+          <select
+            value={yearLabel}
+            onChange={(e) => setYearLabel(e.target.value)}
+            className="w-full rounded-xl bg-[#0e172a] border border-[#1b2b4c] text-slate-200 px-3 py-2 text-xs font-semibold focus:border-[#00d2ff] outline-none"
+          >
+            {YEAR_OPTIONS.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* File Input Box */}
+        <div className="flex-1">
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+            Transcript File (.pdf, .csv, .txt)
+          </label>
+          <label className="flex items-center justify-between rounded-xl bg-[#0e172a] border border-dashed border-[#1b2b4c] hover:border-[#00d2ff] px-4 py-2 cursor-pointer transition-colors group">
+            <span className="text-xs text-slate-300 truncate max-w-[220px]">
+              {file ? file.name : 'Select or drop transcript file…'}
+            </span>
+            <span className="text-[11px] font-semibold text-[#00d2ff] group-hover:underline">
+              Browse
+            </span>
+            <input
+              type="file"
+              accept=".pdf,.csv,.txt"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="hidden"
+            />
+          </label>
+        </div>
+
+        {/* Upload Button */}
+        <div className="shrink-0 flex items-end">
+          <button
+            onClick={handleUpload}
+            disabled={!file || busy}
+            className="w-full sm:w-auto h-[38px] rounded-xl bg-[#00d2ff] hover:bg-[#00bfe6] disabled:opacity-40 text-[#080d1a] font-bold text-xs px-5 shadow-md shadow-[#00d2ff]/20 transition-all flex items-center justify-center gap-1.5"
+          >
+            {busy ? (
+              <>
+                <span className="w-3.5 h-3.5 border-2 border-[#080d1a] border-t-transparent rounded-full animate-spin" />
+                Parsing courses…
+              </>
+            ) : (
+              'Upload & Parse'
+            )}
+          </button>
+        </div>
+      </div>
+
+      {success && (
+        <div className="mt-3 p-2.5 rounded-lg bg-[#064e3b]/40 border border-[#0d6d53] text-[#34d399] text-xs flex items-center gap-2">
+          <span>✓</span> {success}
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-3 p-2.5 rounded-lg bg-red-950/40 border border-red-800 text-red-400 text-xs flex items-center gap-2">
+          <span>⚠</span> {error}
+        </div>
+      )}
     </div>
   );
 }

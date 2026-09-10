@@ -80,3 +80,13 @@ export const HIGH_STAKES_KEYWORDS = [
   'quit school',
   'transfer university',
 ];
+
+export interface StudentUser {
+  id: string;
+  name: string;
+  email: string;
+  role: 'STUDENT' | 'COUNSELOR' | 'ADMIN';
+  educationLevel?: string;
+  institution?: string;
+}
+

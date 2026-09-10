@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -8,23 +8,72 @@ interface ChatMessage {
   toolCalls?: { tool: string; input: unknown }[];
 }
 
-export default function ChatPanel({ userId }: { userId: string }) {
+interface ChatPanelProps {
+  userId: string;
+  isModal?: boolean;
+  onClose?: () => void;
+}
+
+const SUGGESTED_PROMPTS = [
+  'What skills do I need for Data Engineer?',
+  'Can I do software engineering if my math is weak?',
+  'How do I improve my knowledge coverage score?',
+  'Suggest a 6-week study plan for Python & Algorithms',
+];
+
+// Simple markdown-like renderer (bold + inline code)
+function renderContent(text: string) {
+  if (!text) return null;
+  // Bold **text**
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return (
+        <strong key={i} className="font-bold text-white">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return (
+        <code
+          key={i}
+          className="px-1.5 py-0.5 rounded bg-[#0a1528] text-[#00d2ff] font-mono text-[0.85em] border border-[#1b2b4d]"
+        >
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
+
+export default function ChatPanel({ userId, isModal = false, onClose }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'assistant',
       content:
-        "Hi! I'm your career and study advisor. Ask me anything — like whether you can succeed in engineering with weak math, or what careers fit your skills. I'll always tell you where my facts come from.",
+        "Hi Alex! I'm your **UrFuture Copilot**. I can help you analyze career fit, break down required skills, assess course prerequisites, or recommend next steps based on your verified knowledge. How can I guide you today?",
     },
   ]);
   const [input, setInput] = useState('');
   const [conversationId, setConversationId] = useState<string | undefined>(undefined);
   const [streaming, setStreaming] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  async function sendMessage() {
-    if (!input.trim() || streaming) return;
-    const userMessage = input.trim();
-    setInput('');
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, streaming]);
+
+  async function handleSend(customText?: string) {
+    const textToSend = customText ?? input;
+    if (!textToSend.trim() || streaming) return;
+
+    const userMessage = textToSend.trim();
+    if (!customText) setInput('');
+    setShowSuggestions(false);
+
     setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
     setMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
     setStreaming(true);
@@ -80,54 +129,179 @@ export default function ChatPanel({ userId }: { userId: string }) {
             setConversationId(data.conversationId);
           }
         }
-        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
       }
     } catch (e) {
-      setMessages((prev) => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: 'Connection issue encountered. Please try your request again.' },
+      ]);
     } finally {
       setStreaming(false);
     }
   }
 
-  return (
-    <div className="card flex h-[540px] flex-col">
-      <div className="border-b border-black/10 px-4 py-2 text-sm font-medium text-angkor-maroon">Ask Phlouv</div>
-      <div className="flex-1 space-y-3 overflow-y-auto scrollbar-thin p-4">
+  const content = (
+    <div className="flex h-full flex-col bg-[#0a1120] border border-[#1b2947] rounded-2xl shadow-2xl shadow-black/40 overflow-hidden">
+      {/* ========================================================================= */}
+      {/* HEADER */}
+      {/* ========================================================================= */}
+      <div className="border-b border-[#1b2947] px-5 py-3.5 flex items-center justify-between bg-gradient-to-r from-[#0c1830] to-[#0a1426]">
+        <div className="flex items-center gap-3">
+          {/* Robot icon matching the floating button */}
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#00d2ff] to-[#0099cc] flex items-center justify-center shadow-md shadow-[#00d2ff]/30">
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <rect x="5" y="8" width="14" height="10" rx="2" strokeWidth={2} />
+              <circle cx="9" cy="12" r="1.5" fill="currentColor" />
+              <circle cx="15" cy="12" r="1.5" fill="currentColor" />
+              <path strokeLinecap="round" strokeWidth={2} d="M9 15c1.5 1 4.5 1 6 0" />
+              <path strokeLinecap="round" strokeWidth={2} d="M12 8V5" />
+              <circle cx="12" cy="4" r="1" fill="currentColor" />
+              <path strokeLinecap="round" strokeWidth={2} d="M5 12H3M19 12h2" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              UrFuture Copilot
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#00d2ff]/10 text-[#00d2ff] border border-[#00d2ff]/20">
+                AI Advisor
+              </span>
+            </h3>
+            <p className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10b981] opacity-75" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#10b981]" />
+              </span>
+              Online • Grounded citations active
+            </p>
+          </div>
+        </div>
+
+        {isModal && onClose && (
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg bg-[#14223d] hover:bg-[#1e345e] text-slate-400 hover:text-white flex items-center justify-center transition-all hover:scale-105"
+            aria-label="Close chat"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* MESSAGES */}
+      {/* ========================================================================= */}
+      <div className="flex-1 space-y-4 overflow-y-auto p-5 scrollbar-thin">
         {messages.map((m, i) => (
-          <div key={i} className={m.role === 'user' ? 'text-right' : 'text-left'}>
+          <div
+            key={i}
+            className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'} animate-[fadeIn_0.25s_ease-out]`}
+          >
             <div
-              className={
-                'inline-block max-w-[85%] rounded-lg px-3 py-2 text-sm ' +
-                (m.role === 'user' ? 'bg-angkor-maroon text-white' : 'bg-black/5 text-black')
-              }
+              className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                m.role === 'user'
+                  ? 'bg-gradient-to-r from-[#0284c7] to-[#0ea5e9] text-white font-medium shadow-md shadow-[#0284c7]/20 rounded-tr-sm'
+                  : 'bg-[#0f192e] border border-[#1b2b4d] text-slate-200 shadow-sm rounded-tl-sm'
+              }`}
             >
-              {m.content || (streaming && i === messages.length - 1 ? '…' : '')}
+              {m.content ? (
+                <div className="whitespace-pre-wrap break-words">{renderContent(m.content)}</div>
+              ) : streaming && i === messages.length - 1 ? (
+                <div className="flex items-center gap-1.5 py-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00d2ff] animate-bounce [animation-delay:-0.3s]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00d2ff] animate-bounce [animation-delay:-0.15s]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00d2ff] animate-bounce" />
+                </div>
+              ) : null}
             </div>
-            {m.toolCalls?.map((tc, j) => (
-              <div key={j} className="mt-1 text-[11px] text-black/40">
-                🔧 called {tc.tool}
+
+            {/* Subtle tool trace — only shown when present, minimal style */}
+            {m.toolCalls && m.toolCalls.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {m.toolCalls.map((tc, j) => (
+                  <span
+                    key={j}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-[#091322] border border-[#162740] text-slate-500"
+                    title={`Tool: ${tc.tool}`}
+                  >
+                    <span className="text-[#00d2ff]">⚡</span> {tc.tool}
+                  </span>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         ))}
         <div ref={bottomRef} />
       </div>
-      <div className="flex gap-2 border-t border-black/10 p-3">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-          placeholder="Type a question…"
-          className="flex-1 rounded-md border border-black/15 px-3 py-2 text-sm"
-        />
-        <button
-          onClick={sendMessage}
-          disabled={streaming}
-          className="rounded-md bg-angkor-maroon px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
-        >
-          Send
-        </button>
+
+      {/* ========================================================================= */}
+      {/* SUGGESTED PROMPTS */}
+      {/* ========================================================================= */}
+      {showSuggestions && messages.length <= 2 && (
+        <div className="px-5 py-3 border-t border-[#15233d] bg-[#09101e]/60">
+          <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">
+            Try asking
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {SUGGESTED_PROMPTS.map((p, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleSend(p)}
+                disabled={streaming}
+                className="text-[11px] px-3 py-1.5 rounded-full bg-[#111f38] hover:bg-[#1a2e54] hover:border-[#00d2ff]/40 text-slate-300 hover:text-[#00d2ff] border border-[#1e335a] transition-all text-left disabled:opacity-50"
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* INPUT BAR */}
+      {/* ========================================================================= */}
+      <div className="border-t border-[#1b2947] p-3.5 bg-[#09101d]">
+        <div className="flex gap-2 items-center">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+            placeholder="Ask about careers, courses, GPA fit..."
+            disabled={streaming}
+            className="flex-1 rounded-xl bg-[#0e172a] border border-[#1b2b4c] focus:border-[#00d2ff] focus:ring-1 focus:ring-[#00d2ff]/30 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition-all disabled:opacity-50"
+          />
+          <button
+            onClick={() => handleSend()}
+            disabled={streaming || !input.trim()}
+            className="rounded-xl bg-gradient-to-r from-[#00d2ff] to-[#00bfe6] hover:from-[#00bfe6] hover:to-[#00a8cc] disabled:opacity-40 disabled:hover:from-[#00d2ff] disabled:hover:to-[#00bfe6] text-[#080d1a] px-4 py-2.5 text-sm font-bold shadow-md shadow-[#00d2ff]/20 transition-all flex items-center gap-1.5 shrink-0 hover:scale-[1.02] active:scale-[0.98]"
+          >
+            {streaming ? (
+              <span className="w-4 h-4 border-2 border-[#080d1a] border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            )}
+            Send
+          </button>
+        </div>
+        <p className="text-[10px] text-slate-600 mt-1.5 text-center">
+          Press <kbd className="px-1 py-0.5 rounded bg-[#111f38] text-slate-400 font-mono">Enter</kbd> to send • Responses are AI-generated
+        </p>
       </div>
     </div>
   );
+
+  if (isModal) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-sm">
+        <div className="w-full max-w-3xl h-[640px] max-h-[90vh] animate-[fadeIn_0.2s_ease-out]">
+          {content}
+        </div>
+      </div>
+    );
+  }
+
+  return <div className="h-[600px]">{content}</div>;
 }
