@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
+import type { Prisma } from '@prisma/client';
 import { runToolCall, GENERATE_STUDY_PLAN_TOOL } from '@/lib/claude';
 import { BASE_SYSTEM_PROMPT, STUDY_PLAN_FUNCTION_INSTRUCTIONS } from '@/lib/prompts';
 import { getStudentSkillContext, formatStudentSkillsForPrompt } from '@/lib/knowledgeBase';
@@ -40,8 +41,8 @@ export async function POST(req: NextRequest) {
       userId,
       title: result.title,
       targetSkillIds: result.targetSkills,
-      weeks: result.weeks,
-      citations: result.citations,
+      weeks: result.weeks as unknown as Prisma.InputJsonValue,
+      citations: result.citations as unknown as Prisma.InputJsonValue,
       status: 'DRAFT',
     },
   });
