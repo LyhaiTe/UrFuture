@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import UrFutureLogo from '@/components/UrFutureLogo';
 import DashboardWorkspace from '@/components/DashboardWorkspace';
+import KnowledgeMapPanel from '@/components/KnowledgeMapPanel';
 import TranscriptUpload from '@/components/TranscriptUpload';
 import QuizPanel from '@/components/QuizPanel';
 import CareerFitPanel from '@/components/CareerFitPanel';
@@ -12,7 +13,13 @@ import LandingPage from '@/components/authentication/LandingPage';
 import StudentAuthModal from '@/components/authentication/StudentAuthModal';
 import { StudentUser } from '@/types';
 
-const TABS = ['Workspace', 'Knowledge map', 'Career paths', 'Job fit'] as const;
+const TABS = [
+  'Workspace',
+  'Knowledge map',
+  'Career paths',
+  'Job fit',
+] as const;
+
 type Tab = (typeof TABS)[number];
 
 const STORAGE_KEY = 'urfuture_active_student_session';
@@ -38,16 +45,17 @@ export default function Home() {
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [transcriptCount, setTranscriptCount] = useState(0);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isCompletingGoogleAuth, setIsCompletingGoogleAuth] = useState(false);
-  const [authBannerError, setAuthBannerError] = useState<string | null>(null);
+
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // Restore saved student session if exists
+  // Restore saved student session
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
+
       if (saved) {
         const parsed = JSON.parse(saved);
+
         if (parsed && parsed.id) {
           setCurrentUser(parsed);
         }
@@ -59,62 +67,33 @@ export default function Home() {
     }
   }, []);
 
-  // Complete the Google OAuth handoff, if we were just redirected back from
-  // /api/auth/student/google/callback with either a one-time token to consume or an
-  // error code to surface. Either way we scrub the query string afterwards
-  // so refreshing the page doesn't try to reuse a spent token.
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const googleAuthToken = params.get('googleAuth');
-    const authErrorCode = params.get('authError');
-
-    if (googleAuthToken) {
-      setIsCompletingGoogleAuth(true);
-      (async () => {
-        try {
-          const res = await fetch('/api/auth/student/session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: googleAuthToken }),
-          });
-          const data = await res.json();
-          if (data.success && data.user) {
-            handleAuthSuccess(data.user);
-          } else {
-            setAuthBannerError(data.error || 'Google sign-in failed. Please try again.');
-          }
-        } catch {
-          setAuthBannerError('Google sign-in failed. Please try again.');
-        } finally {
-          setIsCompletingGoogleAuth(false);
-          window.history.replaceState({}, '', window.location.pathname);
-        }
-      })();
-    } else if (authErrorCode) {
-      setAuthBannerError(GOOGLE_AUTH_ERROR_MESSAGES[authErrorCode] || 'Google sign-in was not completed.');
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Close user dropdown when clicking outside
+  // Close user menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target as Node)
+      ) {
         setIsUserMenuOpen(false);
       }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   const handleAuthSuccess = (user: StudentUser) => {
     setCurrentUser(user);
+
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
     } catch (e) {
       console.warn('Failed to save session locally', e);
     }
+
     setTab('Workspace');
   };
 
@@ -122,10 +101,16 @@ export default function Home() {
     try {
       const res = await fetch('/api/auth/student', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'demo' }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'demo',
+        }),
       });
+
       const data = await res.json();
+
       if (data.success && data.user) {
         handleAuthSuccess(data.user);
       } else {
@@ -149,29 +134,45 @@ export default function Home() {
     } catch (e) {
       console.warn(e);
     }
+
     setCurrentUser(null);
     setIsUserMenuOpen(false);
     setTab('Workspace');
   };
 
-  // Helper initials for avatar
+  // Get initials for user avatar
   const getInitials = (name?: string) => {
-    if (!name) return 'ST';
+    if (!name) {
+      return 'ST';
+    }
+
     const parts = name.trim().split(' ');
-    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+
+    if (parts.length === 1) {
+      return parts[0].substring(0, 2).toUpperCase();
+    }
+
+    return (
+      parts[0][0] + parts[parts.length - 1][0]
+    ).toUpperCase();
   };
 
-  // Initial loader
-  if (isInitializing || isCompletingGoogleAuth) {
+  // Initial loading screen
+  if (isInitializing) {
     return (
-      <main className="min-h-screen bg-dark-bg flex items-center justify-center">
-        <div className="w-14 h-14 border-4 border-slate-700 border-t-brand-cyan rounded-full animate-spin" />
+      <main className="min-h-screen bg-[#080d1a] flex flex-col items-center justify-center text-slate-400">
+        <div className="animate-pulse mb-4">
+          <UrFutureLogo variant="icon-only" size="lg" />
+        </div>
+
+        <p className="text-xs font-semibold tracking-wider text-slate-400 uppercase">
+          Loading UrFuture…
+        </p>
       </main>
     );
   }
 
-  // If not logged in, show the Landing Page with Auth Modal
+  // Landing page when user is not logged in
   if (!currentUser) {
     return (
       <>
@@ -195,6 +196,7 @@ export default function Home() {
           }}
           onQuickDemo={handleQuickDemo}
         />
+
         <StudentAuthModal
           isOpen={isAuthModalOpen}
           initialMode={authMode}
@@ -205,22 +207,29 @@ export default function Home() {
     );
   }
 
-  // LOGGED IN DASHBOARD
+  // Logged-in dashboard
   return (
     <div className="min-h-screen bg-[#080d1a] text-[#f1f5f9] flex flex-col">
-      {/* ========================================================================= */}
-      {/* TOP NAVIGATION HEADER */}
-      {/* ========================================================================= */}
+      {/* ================================================================ */}
+      {/* TOP NAVIGATION */}
+      {/* ================================================================ */}
+
       <header className="sticky top-0 z-40 bg-[#080d1a]/90 backdrop-blur-md border-b border-[#142038] px-4 sm:px-8 py-3.5 flex items-center justify-between">
-        {/* Left: Brand Logo */}
-        <div className="cursor-pointer" onClick={() => setTab('Workspace')}>
+        {/* Logo */}
+
+        <div
+          className="cursor-pointer"
+          onClick={() => setTab('Workspace')}
+        >
           <UrFutureLogo variant="navbar" />
         </div>
 
-        {/* Center: Navigation Tabs Pill */}
+        {/* Desktop navigation */}
+
         <nav className="hidden md:flex items-center gap-1 bg-[#0c1424] border border-[#172640] p-1 rounded-xl">
           {TABS.map((t) => {
             const isActive = tab === t;
+
             return (
               <button
                 key={t}
@@ -237,47 +246,87 @@ export default function Home() {
           })}
         </nav>
 
-        {/* Right: Notifications Bell & User Profile Dropdown */}
+        {/* Right controls */}
+
         <div className="flex items-center gap-3">
-          {/* Notification Bell */}
+          {/* Notifications */}
+
           <button
             title="Notifications"
             className="w-9 h-9 rounded-full bg-[#0c1628] hover:bg-[#13223d] border border-[#1b2b4c] text-slate-300 hover:text-white flex items-center justify-center transition-colors relative"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+              />
             </svg>
+
             <span className="w-2 h-2 rounded-full bg-[#00d2ff] absolute top-2 right-2 ring-2 ring-[#080d1a]" />
           </button>
 
-          {/* User Profile Avatar with Dropdown Menu */}
-          <div className="relative" ref={userMenuRef}>
+          {/* User profile */}
+
+          <div
+            className="relative"
+            ref={userMenuRef}
+          >
             <button
-              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+              onClick={() =>
+                setIsUserMenuOpen(!isUserMenuOpen)
+              }
               title={`${currentUser.name} (${currentUser.email})`}
               className="flex items-center gap-2 p-1 rounded-full hover:bg-[#121e35] transition-colors"
             >
               <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#10b981] to-[#00d2ff] text-[#080d1a] font-extrabold text-xs flex items-center justify-center shadow-md shadow-[#10b981]/25 select-none hover:scale-105 transition-transform">
                 {getInitials(currentUser.name)}
               </div>
+
               <span className="hidden sm:inline-block text-xs font-semibold text-slate-300 max-w-[120px] truncate">
                 {currentUser.name.split(' ')[0]}
               </span>
-              <svg className="w-3.5 h-3.5 text-slate-400 hidden sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+
+              <svg
+                className="w-3.5 h-3.5 text-slate-400 hidden sm:block"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
               </svg>
             </button>
 
-            {/* Dropdown Menu Box */}
+            {/* User dropdown */}
+
             {isUserMenuOpen && (
               <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-[#0c1424] border border-[#1d2d4c] shadow-2xl shadow-black/50 py-2 z-50 animate-fadeIn">
                 <div className="px-4 py-3 border-b border-[#172540]">
-                  <p className="text-xs font-bold text-white truncate">{currentUser.name}</p>
-                  <p className="text-[11px] text-slate-400 truncate">{currentUser.email}</p>
+                  <p className="text-xs font-bold text-white truncate">
+                    {currentUser.name}
+                  </p>
+
+                  <p className="text-[11px] text-slate-400 truncate">
+                    {currentUser.email}
+                  </p>
+
                   <div className="mt-2 flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-[#10b981]" />
+
                     <span className="text-[10px] font-semibold text-[#00d2ff] truncate">
-                      {currentUser.institution || 'Cambodia Student'}
+                      {currentUser.institution ||
+                        'Cambodia Student'}
                     </span>
                   </div>
                 </div>
@@ -290,7 +339,8 @@ export default function Home() {
                     }}
                     className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:text-white hover:bg-[#14233e] flex items-center gap-2"
                   >
-                    <span>🏠</span> Workspace Dashboard
+                    <span>🏠</span>
+                    Workspace Dashboard
                   </button>
 
                   <button
@@ -300,7 +350,8 @@ export default function Home() {
                     }}
                     className="w-full text-left px-4 py-2 text-xs text-[#00d2ff] hover:bg-[#14233e] flex items-center gap-2"
                   >
-                    <span>⚡</span> Switch to Seeded Demo
+                    <span>⚡</span>
+                    Switch to Seeded Demo
                   </button>
                 </div>
 
@@ -309,9 +360,20 @@ export default function Home() {
                     onClick={handleLogOut}
                     className="w-full text-left px-4 py-2 text-xs text-red-400 hover:text-red-300 hover:bg-red-950/40 flex items-center gap-2 transition-colors"
                   >
-                    <svg className="w-3.5 h-3.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    <svg
+                      className="w-3.5 h-3.5 text-red-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                      />
                     </svg>
+
                     Sign Out &amp; Return to Home
                   </button>
                 </div>
@@ -321,7 +383,10 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Mobile Tab Bar */}
+      {/* ================================================================ */}
+      {/* MOBILE NAVIGATION */}
+      {/* ================================================================ */}
+
       <div className="md:hidden flex overflow-x-auto px-4 py-2 gap-1.5 border-b border-[#142038] bg-[#0c1424]">
         {TABS.map((t) => (
           <button
@@ -338,55 +403,95 @@ export default function Home() {
         ))}
       </div>
 
-      {/* ========================================================================= */}
-      {/* MAIN CONTENT CONTAINER */}
-      {/* ========================================================================= */}
+      {/* ================================================================ */}
+      {/* MAIN CONTENT */}
+      {/* ================================================================ */}
+
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8">
+        {/* Workspace */}
+
         {tab === 'Workspace' && (
           <DashboardWorkspace
             userId={currentUser.id}
             studentName={currentUser.name}
             institution={currentUser.institution}
             onNavigateTab={setTab}
-            onOpenCopilot={() => setIsCopilotOpen(true)}
+            onOpenCopilot={() =>
+              setIsCopilotOpen(true)
+            }
           />
         )}
 
+        {/* Knowledge Map */}
+
         {tab === 'Knowledge map' && (
           <div className="flex flex-col gap-6">
+            <KnowledgeMapPanel
+              userId={currentUser.id}
+            />
+
             <TranscriptUpload
               userId={currentUser.id}
-              onUploaded={() => setTranscriptCount((c) => c + 1)}
+              onUploaded={() =>
+                setTranscriptCount((c) => c + 1)
+              }
             />
+
             {transcriptCount > 0 && (
               <p className="text-xs text-[#34d399] font-medium px-1">
-                ✓ {transcriptCount} transcript(s) processed in this active session.
+                ✓ {transcriptCount} transcript(s) processed
+                in this active session.
               </p>
             )}
+
             <QuizPanel
               userId={currentUser.id}
-              onNavigateToCareers={() => setTab('Career paths')}
+              onNavigateToCareers={() =>
+                setTab('Career paths')
+              }
             />
           </div>
         )}
 
-        {tab === 'Career paths' && <CareerFitPanel userId={currentUser.id} />}
+        {/* Career Paths */}
 
-        {tab === 'Job fit' && <JobFitPanel userId={currentUser.id} />}
+        {tab === 'Career paths' && (
+          <CareerFitPanel
+            userId={currentUser.id}
+          />
+        )}
+
+        {/* Job Fit */}
+
+        {tab === 'Job fit' && (
+          <JobFitPanel
+            userId={currentUser.id}
+          />
+        )}
       </main>
+
+      {/* ================================================================ */}
+      {/* CHATBOT MODAL */}
+      {/* ================================================================ */}
 
       {isCopilotOpen && (
         <ChatPanel
           userId={currentUser.id}
           isModal={true}
-          onClose={() => setIsCopilotOpen(false)}
+          onClose={() =>
+            setIsCopilotOpen(false)
+          }
         />
       )}
 
-      {/* Footer */}
+      {/* ================================================================ */}
+      {/* FOOTER */}
+      {/* ================================================================ */}
+
       <footer className="mt-auto border-t border-[#142038] py-6 px-4 text-center text-xs text-slate-500">
         <p>
-          UrFuture — Learn • Plan • Achieve. Decision support &amp; grounded career pathways for students.
+          UrFuture — Learn • Plan • Achieve. Decision support
+          &amp; grounded career pathways for students.
         </p>
       </footer>
     </div>
