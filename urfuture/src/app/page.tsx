@@ -8,14 +8,26 @@ import QuizPanel from '@/components/QuizPanel';
 import CareerFitPanel from '@/components/CareerFitPanel';
 import JobFitPanel from '@/components/JobFitPanel';
 import ChatPanel from '@/components/ChatPanel';
-import LandingPage from '@/components/LandingPage';
-import StudentAuthModal from '@/components/StudentAuthModal';
+import LandingPage from '@/components/authentication/LandingPage';
+import StudentAuthModal from '@/components/authentication/StudentAuthModal';
 import { StudentUser } from '@/types';
 
 const TABS = ['Workspace', 'Knowledge map', 'Career paths', 'Job fit'] as const;
 type Tab = (typeof TABS)[number];
 
 const STORAGE_KEY = 'urfuture_active_student_session';
+
+// Human-readable copy for the ?authError=<code> values the Google OAuth
+// routes redirect back with (see src/app/api/auth/google/callback/route.ts).
+const GOOGLE_AUTH_ERROR_MESSAGES: Record<string, string> = {
+  google_cancelled: 'Google sign-in was cancelled.',
+  google_denied: 'Google denied the sign-in request.',
+  google_email_unverified: 'That Google account\u2019s email isn\u2019t verified, so we can\u2019t sign you in with it.',
+  google_state_mismatch: 'Your sign-in session expired before Google redirected back. Please try again.',
+  google_missing_params: 'Something interrupted the Google sign-in redirect. Please try again.',
+  google_exchange_failed: 'We couldn\u2019t complete sign-in with Google. Please try again.',
+  google_not_configured: 'Google sign-in isn\u2019t available right now.',
+};
 
 export default function Home() {
   const [tab, setTab] = useState<Tab>('Workspace');
@@ -26,6 +38,8 @@ export default function Home() {
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [transcriptCount, setTranscriptCount] = useState(0);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isCompletingGoogleAuth, setIsCompletingGoogleAuth] = useState(false);
+  const [authBannerError, setAuthBannerError] = useState<string | null>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Restore saved student session if exists
@@ -43,6 +57,44 @@ export default function Home() {
     } finally {
       setIsInitializing(false);
     }
+  }, []);
+
+  // Complete the Google OAuth handoff, if we were just redirected back from
+  // /api/auth/student/google/callback with either a one-time token to consume or an
+  // error code to surface. Either way we scrub the query string afterwards
+  // so refreshing the page doesn't try to reuse a spent token.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const googleAuthToken = params.get('googleAuth');
+    const authErrorCode = params.get('authError');
+
+    if (googleAuthToken) {
+      setIsCompletingGoogleAuth(true);
+      (async () => {
+        try {
+          const res = await fetch('/api/auth/student/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: googleAuthToken }),
+          });
+          const data = await res.json();
+          if (data.success && data.user) {
+            handleAuthSuccess(data.user);
+          } else {
+            setAuthBannerError(data.error || 'Google sign-in failed. Please try again.');
+          }
+        } catch {
+          setAuthBannerError('Google sign-in failed. Please try again.');
+        } finally {
+          setIsCompletingGoogleAuth(false);
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      })();
+    } else if (authErrorCode) {
+      setAuthBannerError(GOOGLE_AUTH_ERROR_MESSAGES[authErrorCode] || 'Google sign-in was not completed.');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Close user dropdown when clicking outside
@@ -111,15 +163,10 @@ export default function Home() {
   };
 
   // Initial loader
-  if (isInitializing) {
+  if (isInitializing || isCompletingGoogleAuth) {
     return (
-      <main className="min-h-screen bg-[#080d1a] flex flex-col items-center justify-center text-slate-400">
-        <div className="animate-pulse mb-4">
-          <UrFutureLogo variant="icon-only" size="lg" />
-        </div>
-        <p className="text-xs font-semibold tracking-wider text-slate-400 uppercase">
-          Loading UrFuture…
-        </p>
+      <main className="min-h-screen bg-dark-bg flex items-center justify-center">
+        <div className="w-14 h-14 border-4 border-slate-700 border-t-brand-cyan rounded-full animate-spin" />
       </main>
     );
   }
@@ -128,6 +175,19 @@ export default function Home() {
   if (!currentUser) {
     return (
       <>
+        {authBannerError && (
+          <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[92vw] max-w-md">
+            <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-red-950/90 border border-red-800/60 text-red-200 text-xs shadow-2xl backdrop-blur-md">
+              <svg className="w-4 h-4 shrink-0 mt-0.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="flex-1">{authBannerError}</span>
+              <button onClick={() => setAuthBannerError(null)} className="text-red-300 hover:text-white shrink-0" aria-label="Dismiss">
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
         <LandingPage
           onOpenAuth={(mode) => {
             setAuthMode(mode);
@@ -315,9 +375,6 @@ export default function Home() {
         {tab === 'Job fit' && <JobFitPanel userId={currentUser.id} />}
       </main>
 
-      {/* ========================================================================= */}
-      {/* CHATBOT MODAL — only rendered when open */}
-      {/* ========================================================================= */}
       {isCopilotOpen && (
         <ChatPanel
           userId={currentUser.id}

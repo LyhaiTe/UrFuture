@@ -19,6 +19,9 @@ CREATE TYPE "ReviewStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'NEEDS_RE
 -- CreateEnum
 CREATE TYPE "MessageRole" AS ENUM ('USER', 'ASSISTANT', 'SYSTEM', 'TOOL');
 
+--CreateEnum
+CREATE TYPE "AuthProvider" AS ENUM ('LOCAL', 'GOOGLE');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
@@ -229,6 +232,12 @@ CREATE TABLE "Message" (
     CONSTRAINT "Message_pkey" PRIMARY KEY ("id")
 );
 
+-- AlterTable
+ALTER TABLE "User"
+  ADD COLUMN "authProvider" "AuthProvider" NOT NULL DEFAULT 'LOCAL',
+  ADD COLUMN "googleId" TEXT,
+  ADD COLUMN "avatarUrl" TEXT;
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -267,6 +276,9 @@ CREATE INDEX "CounselorReview_status_idx" ON "CounselorReview"("status");
 
 -- CreateIndex
 CREATE INDEX "Message_conversationId_idx" ON "Message"("conversationId");
+
+--CreateIndex
+CREATE UNIQUE INDEX "User_googleId_key" ON "User"("googleId")
 
 -- AddForeignKey
 ALTER TABLE "Transcript" ADD CONSTRAINT "Transcript_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
