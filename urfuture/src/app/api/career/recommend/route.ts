@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
+import type { Prisma } from '@prisma/client';
 import { runToolCall, ANALYZE_SKILL_GAP_TOOL } from '@/lib/claude';
 import { BASE_SYSTEM_PROMPT, SKILL_GAP_FUNCTION_INSTRUCTIONS } from '@/lib/prompts';
 import { getCareerContext, getStudentSkillContext, formatCareerContextForPrompt, formatStudentSkillsForPrompt } from '@/lib/knowledgeBase';
@@ -63,10 +64,10 @@ export async function POST(req: NextRequest) {
         userId,
         careerPathId: career.id,
         fitScore: result.fitScore,
-        matchedSkills: result.matchedSkills,
-        missingSkills: result.missingSkills,
+        matchedSkills: result.matchedSkills as unknown as Prisma.InputJsonValue,
+        missingSkills: result.missingSkills as unknown as Prisma.InputJsonValue,
         rationale: result.rationale,
-        citations: result.citations,
+        citations: result.citations as unknown as Prisma.InputJsonValue,
         requiresReview: result.requiresCounselorReview,
       },
     });

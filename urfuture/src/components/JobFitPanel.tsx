@@ -2,112 +2,702 @@
 
 import { useState } from 'react';
 
-interface JobFitResult {
+interface SkillGapItem {
+  skillName: string;
+  userProficiency: number;
+  requiredImportance: number;
+  gap: number;
+}
+
+interface JobMatchResult {
   jobTitle: string;
-  extractedSkills: string[];
-  matchedSkills: string[];
-  missingSkills: string[];
-  fitScorePercent: number;
-  summary: string;
-  needsPrep: boolean;
+  fitScore: number;
+  matchedSkills: SkillGapItem[];
+  missingSkills: SkillGapItem[];
+  explanation: string;
+  citations: {
+    source: string;
+    reference: string;
+    claim: string;
+  }[];
+  requiresCounselorReview: boolean;
+  reviewReason?: string;
+}
+
+interface StudyPlanItem {
+  id: string;
+  title: string;
+  description: string;
+  priority: string;
+  estimatedDuration: string;
 }
 
 export default function JobFitPanel({ userId }: { userId: string }) {
   const [jobTitle, setJobTitle] = useState('');
   const [jobDescription, setJobDescription] = useState('');
-  const [result, setResult] = useState<JobFitResult | null>(null);
+  const [result, setResult] = useState<JobMatchResult | null>(null);
+  const [studyPlan, setStudyPlan] = useState<StudyPlanItem[]>([]);
   const [busy, setBusy] = useState(false);
+  const [planBusy, setPlanBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [planStatus, setPlanStatus] = useState<string | null>(null);
 
+  /*
+   * -------------------------------------------------------
+   * API CODE — KEEP FOR BACKEND INTEGRATION
+   * -------------------------------------------------------
+   * This still calls the existing /api/job/match endpoint.
+   */
   async function checkFit() {
+    if (!jobTitle.trim() || !jobDescription.trim()) {
+      setError('Please enter a job title and job description.');
+      return;
+    }
+
+    if (jobDescription.trim().length < 20) {
+      setError('Please enter a more detailed job description.');
+      return;
+    }
+
     setBusy(true);
     setError(null);
     setResult(null);
-    setPlanStatus(null);
+    setStudyPlan([]);
+
     try {
       const res = await fetch('/api/job/match', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, jobTitle, jobDescription }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          jobTitle,
+          jobDescription,
+        }),
       });
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Could not analyze job fit');
-      setResult(data);
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Could not analyze job fit');
+      }
+
+      setResult(data.result);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not analyze job fit');
+      setError(
+        e instanceof Error ? e.message : 'Could not analyze job fit'
+      );
     } finally {
       setBusy(false);
     }
   }
 
+  /*
+   * -------------------------------------------------------
+   * API CODE — KEEP FOR BACKEND INTEGRATION
+   * -------------------------------------------------------
+   * This still calls the existing
+   * /api/study-plan/generate endpoint.
+   */
   async function requestPrepPlan() {
     if (!result) return;
-    setPlanStatus('Generating prep plan…');
+
+    setPlanBusy(true);
+    setError(null);
+
     try {
       const res = await fetch('/api/study-plan/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, targetSkillNames: result.missingSkills, weeksRequested: 6 }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          jobTitle: result.jobTitle,
+          missingSkills: result.missingSkills,
+        }),
       });
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Could not generate plan');
-      setPlanStatus(`Prep plan "${data.studyPlan.title}" created — see it in your Study Plans list.`);
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Could not generate study plan');
+      }
+
+      setStudyPlan(data.plan || data.studyPlan || []);
     } catch (e) {
-      setPlanStatus(e instanceof Error ? e.message : 'Could not generate plan');
+      setError(
+        e instanceof Error ? e.message : 'Could not generate study plan'
+      );
+    } finally {
+      setPlanBusy(false);
     }
   }
 
-  return (
-    <div className="card p-4">
-      <h3 className="mb-3 text-sm font-medium text-angkor-maroon">Job description fit-check</h3>
-      <div className="flex flex-col gap-2">
-        <input
-          value={jobTitle}
-          onChange={(e) => setJobTitle(e.target.value)}
-          placeholder="Job title (e.g. Junior Software Engineer)"
-          className="rounded-md border border-black/15 px-3 py-1.5 text-sm"
-        />
-        <textarea
-          value={jobDescription}
-          onChange={(e) => setJobDescription(e.target.value)}
-          placeholder="Paste the job description here…"
-          rows={5}
-          className="rounded-md border border-black/15 px-3 py-1.5 text-sm"
-        />
-        <button
-          onClick={checkFit}
-          disabled={!jobTitle || jobDescription.length < 20 || busy}
-          className="self-start rounded-md bg-angkor-maroon px-4 py-1.5 text-sm font-medium text-white disabled:opacity-40"
-        >
-          {busy ? 'Assessing…' : 'Check my fit'}
-        </button>
-      </div>
+  function useSample(
+    title: string,
+    description: string
+  ) {
+    setJobTitle(title);
+    setJobDescription(description);
+    setResult(null);
+    setStudyPlan([]);
+    setError(null);
+  }
 
-      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+  function getFitLabel(score: number) {
+    if (score >= 90) return 'Excellent match';
+    if (score >= 80) return 'Strong match';
+    if (score >= 70) return 'Good match';
+    if (score >= 60) return 'Moderate match';
+    return 'Developing match';
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+
+      {/* ================================================= */}
+      {/* JOB DESCRIPTION INPUT */}
+      {/* ================================================= */}
+
+      <section className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-6">
+
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#00d2ff]" />
+
+              <h2 className="text-lg font-bold text-white">
+                Job Description Fit-Check & Gap Assessment
+              </h2>
+            </div>
+
+            <p className="text-xs text-slate-400 mt-2">
+              Compare a job posting against your verified knowledge map
+              and identify your strongest and missing skills.
+            </p>
+          </div>
+
+          <span className="self-start px-3 py-1.5 rounded-full bg-[#00d2ff]/10 border border-[#00d2ff]/30 text-[10px] font-bold text-[#00d2ff]">
+            Semantic Matcher
+          </span>
+
+        </div>
+
+        {/* Sample jobs */}
+
+        <div className="flex flex-wrap items-center gap-2 mt-5">
+
+          <span className="text-[11px] text-slate-500">
+            Try a sample:
+          </span>
+
+          <button
+            type="button"
+            onClick={() =>
+              useSample(
+                'Junior Software Engineer',
+                'We are looking for a Junior Software Engineer named NUT SANNARA with knowledge of programming fundamentals, data structures, algorithms, SQL, database design, Git, automated testing, cloud deployment, and software development best practices.'
+              )
+            }
+            className="px-3 py-1.5 rounded-lg border border-[#1b2947] bg-[#09111f] text-xs text-slate-300 hover:border-[#00d2ff]/50 hover:text-[#00d2ff] transition"
+          >
+            Junior Software Engineer
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              useSample(
+                'Data & Business Analyst',
+                'Seeking a Data and Business Analyst with skills 67676767676767 skibidi toilet in SQL, database systems, data analysis, dashboards, business intelligence, communication, reporting, Excel, and analytical problem solving.'
+              )
+            }
+            className="px-3 py-1.5 rounded-lg border border-[#1b2947] bg-[#09111f] text-xs text-slate-300 hover:border-[#00d2ff]/50 hover:text-[#00d2ff] transition"
+          >
+            Data & Business Analyst
+          </button>
+
+        </div>
+
+        {/* Job title */}
+
+        <div className="mt-4">
+
+          <label className="text-[10px] uppercase tracking-wider font-bold text-slate-500">
+            Job Title
+          </label>
+
+          <input
+            type="text"
+            value={jobTitle}
+            onChange={(e) => setJobTitle(e.target.value)}
+            placeholder="e.g. Junior Data Engineer, Full-Stack Developer"
+            className="mt-2 w-full bg-[#09111f] border border-[#1b2947] rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none focus:border-[#00d2ff]/60 transition"
+          />
+
+        </div>
+
+        {/* Job description */}
+
+        <div className="mt-4">
+
+          <label className="text-[10px] uppercase tracking-wider font-bold text-slate-500">
+            Job Description / Requirements
+          </label>
+
+          <textarea
+            value={jobDescription}
+            onChange={(e) => setJobDescription(e.target.value)}
+            placeholder="Paste the job description or role requirements here..."
+            rows={6}
+            className="mt-2 w-full resize-none bg-[#09111f] border border-[#1b2947] rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none focus:border-[#00d2ff]/60 transition"
+          />
+
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-3">
+
+          <span className="text-[10px] text-slate-500">
+            {jobDescription.length} characters (min 20)
+          </span>
+
+          <button
+            type="button"
+            onClick={checkFit}
+            disabled={
+              busy ||
+              !jobTitle.trim() ||
+              jobDescription.trim().length < 20
+            }
+            className="rounded-xl bg-[#00d2ff] hover:bg-[#00bfe6] disabled:opacity-40 disabled:cursor-not-allowed text-[#080d1a] px-6 py-2.5 text-xs font-bold shadow-md shadow-[#00d2ff]/20 transition flex items-center justify-center gap-2"
+          >
+
+            {busy && (
+              <span className="w-3.5 h-3.5 border-2 border-[#080d1a] border-t-transparent rounded-full animate-spin" />
+            )}
+
+            {busy ? 'Analyzing Job Fit...' : 'Analyze Fit Score'}
+
+          </button>
+
+        </div>
+
+        {error && (
+          <div className="mt-4 p-3 rounded-lg bg-red-950/40 border border-red-800 text-red-400 text-xs">
+            ⚠ {error}
+          </div>
+        )}
+
+      </section>
+
+      {/* ================================================= */}
+      {/* RESULT */}
+      {/* ================================================= */}
 
       {result && (
-        <div className="mt-4 rounded-md bg-brand-50 p-4">
-          <p className="text-xl font-semibold text-brand-700">
-            {result.matchedSkills.length}/{result.extractedSkills.length} skills — {result.fitScorePercent}% fit
-          </p>
-          <p className="mt-1 text-sm text-black/70">{result.summary}</p>
-          {result.missingSkills.length > 0 && (
-            <p className="mt-2 text-xs text-black/60">
-              Missing: {result.missingSkills.join(', ')}
+        <>
+
+          {/* Score */}
+
+          <section className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-6">
+
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+
+              <div>
+
+                <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500">
+                  Job Fit Analysis
+                </p>
+
+                <h2 className="text-xl font-bold text-white mt-2">
+                  {result.jobTitle}
+                </h2>
+
+                <p className="text-sm text-[#34d399] font-semibold mt-1">
+                  {getFitLabel(result.fitScore)}
+                </p>
+
+              </div>
+
+              <div className="md:text-right">
+
+                <div className="text-4xl font-extrabold text-[#34d399]">
+                  {Math.round(result.fitScore)}%
+                </div>
+
+                <div className="text-xs text-slate-500 mt-1">
+                  Job Fit Score
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* Progress */}
+
+            <div className="mt-5">
+
+              <div className="flex justify-between text-xs mb-2">
+
+                <span className="text-slate-500">
+                  Profile compatibility
+                </span>
+
+                <span className="text-slate-300 font-bold">
+                  {Math.round(result.fitScore)}%
+                </span>
+
+              </div>
+
+              <div className="h-2 bg-[#17253d] rounded-full overflow-hidden">
+
+                <div
+                  className="h-full bg-gradient-to-r from-[#00d2ff] to-[#34d399] rounded-full transition-all duration-700"
+                  style={{
+                    width: `${Math.min(
+                      Math.max(result.fitScore, 0),
+                      100
+                    )}%`,
+                  }}
+                />
+
+              </div>
+
+            </div>
+
+          </section>
+
+          {/* ================================================= */}
+          {/* MATCHED / MISSING */}
+          {/* ================================================= */}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            {/* Matching skills */}
+
+            <section className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-6">
+
+              <div className="flex items-center justify-between">
+
+                <h3 className="text-sm font-bold text-white">
+                  Matching Skills
+                </h3>
+
+                <span className="text-[10px] px-2 py-1 rounded-full bg-[#10b981]/10 text-[#34d399]">
+                  {result.matchedSkills.length} matched
+                </span>
+
+              </div>
+
+              <div className="space-y-3 mt-5">
+
+                {result.matchedSkills.map((skill) => (
+
+                  <div
+                    key={skill.skillName}
+                    className="bg-[#09111f] border border-[#1b2947] rounded-lg p-3"
+                  >
+
+                    <div className="flex justify-between gap-3">
+
+                      <div className="flex gap-2">
+
+                        <span className="text-[#34d399]">
+                          ✓
+                        </span>
+
+                        <span className="text-xs text-slate-200">
+                          {skill.skillName}
+                        </span>
+
+                      </div>
+
+                      <span className="text-xs font-bold text-[#34d399]">
+                        {Math.round(skill.userProficiency)}%
+                      </span>
+
+                    </div>
+
+                    <div className="h-1.5 bg-[#17253d] rounded-full overflow-hidden mt-3">
+
+                      <div
+                        className="h-full bg-[#34d399] rounded-full"
+                        style={{
+                          width: `${Math.min(
+                            skill.userProficiency,
+                            100
+                          )}%`,
+                        }}
+                      />
+
+                    </div>
+
+                  </div>
+
+                ))}
+
+              </div>
+
+            </section>
+
+            {/* Missing skills */}
+
+            <section className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-6">
+
+              <div className="flex items-center justify-between">
+
+                <h3 className="text-sm font-bold text-white">
+                  Skills to Strengthen
+                </h3>
+
+                <span className="text-[10px] px-2 py-1 rounded-full bg-amber-500/10 text-amber-400">
+                  {result.missingSkills.length} gaps
+                </span>
+
+              </div>
+
+              <div className="space-y-3 mt-5">
+
+                {result.missingSkills.map((skill, index) => (
+
+                  <div
+                    key={skill.skillName}
+                    className="bg-[#09111f] border border-[#1b2947] rounded-lg p-3"
+                  >
+
+                    <div className="flex items-start justify-between gap-3">
+
+                      <div className="flex gap-2">
+
+                        <span className="text-amber-400 text-xs">
+                          {index + 1}.
+                        </span>
+
+                        <div>
+
+                          <p className="text-xs text-slate-200">
+                            {skill.skillName}
+                          </p>
+
+                          <p className="text-[10px] text-slate-500 mt-1">
+                            Current {Math.round(skill.userProficiency)}%
+                            {' • '}
+                            Required {Math.round(skill.requiredImportance)}%
+                          </p>
+
+                        </div>
+
+                      </div>
+
+                      <span className="text-[10px] font-bold text-amber-400">
+                        Gap {Math.round(skill.gap)}%
+                      </span>
+
+                    </div>
+
+                  </div>
+
+                ))}
+
+              </div>
+
+            </section>
+
+          </div>
+
+          {/* ================================================= */}
+          {/* EXPLANATION */}
+          {/* ================================================= */}
+
+          <section className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-6">
+
+            <h3 className="text-sm font-bold text-white">
+              Why this job fits you
+            </h3>
+
+            <p className="text-sm text-slate-300 leading-relaxed mt-3">
+              {result.explanation}
             </p>
+
+            {result.requiresCounselorReview && (
+              <div className="mt-4 bg-amber-950/30 border border-amber-800/60 rounded-lg p-3">
+
+                <p className="text-xs font-bold text-amber-300">
+                  Counselor Review Recommended
+                </p>
+
+                {result.reviewReason && (
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    {result.reviewReason}
+                  </p>
+                )}
+
+              </div>
+            )}
+
+          </section>
+
+          {/* ================================================= */}
+          {/* CITATIONS */}
+          {/* ================================================= */}
+
+          {result.citations?.length > 0 && (
+
+            <section className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-6">
+
+              <h3 className="text-sm font-bold text-white">
+                Grounded Data Sources
+              </h3>
+
+              <div className="space-y-3 mt-4">
+
+                {result.citations.map((citation, index) => (
+
+                  <div
+                    key={index}
+                    className="flex items-start gap-3 text-xs"
+                  >
+
+                    <span className="text-[#00d2ff] font-mono">
+                      [{index + 1}]
+                    </span>
+
+                    <div>
+
+                      <p className="text-slate-300">
+                        <strong>{citation.source}</strong>
+                      </p>
+
+                      <p className="text-slate-500 mt-1">
+                        {citation.claim}
+                      </p>
+
+                      {citation.reference && (
+                        <p className="text-[10px] text-slate-600 mt-1">
+                          {citation.reference}
+                        </p>
+                      )}
+
+                    </div>
+
+                  </div>
+
+                ))}
+
+              </div>
+
+            </section>
+
           )}
-          {result.needsPrep && (
-            <button
-              onClick={requestPrepPlan}
-              className="mt-3 rounded-md bg-angkor-gold px-3 py-1.5 text-xs font-medium text-angkor-maroon"
-            >
-              Help me prepare for this job
-            </button>
-          )}
-          {planStatus && <p className="mt-2 text-xs text-black/60">{planStatus}</p>}
-        </div>
+
+          {/* ================================================= */}
+          {/* STUDY PLAN */}
+          {/* ================================================= */}
+
+          <section className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-6">
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+
+              <div>
+
+                <h3 className="text-sm font-bold text-white">
+                  Job Preparation Plan
+                </h3>
+
+                <p className="text-xs text-slate-400 mt-1">
+                  Generate a focused learning plan based on the
+                  skills you're currently missing.
+                </p>
+
+              </div>
+
+              <button
+                type="button"
+                onClick={requestPrepPlan}
+                disabled={planBusy || result.missingSkills.length === 0}
+                className="rounded-xl border border-[#00d2ff] text-[#00d2ff] hover:bg-[#00d2ff]/10 disabled:opacity-40 px-5 py-2.5 text-xs font-bold transition flex items-center justify-center gap-2"
+              >
+
+                {planBusy && (
+                  <span className="w-3.5 h-3.5 border-2 border-[#00d2ff] border-t-transparent rounded-full animate-spin" />
+                )}
+
+                {planBusy
+                  ? 'Generating Plan...'
+                  : 'Generate Prep Study Plan'}
+
+              </button>
+
+            </div>
+
+            {/* Generated study plan */}
+
+            {studyPlan.length > 0 && (
+
+              <div className="space-y-3 mt-5">
+
+                {studyPlan.map((item, index) => (
+
+                  <div
+                    key={item.id || index}
+                    className="bg-[#09111f] border border-[#1b2947] rounded-xl p-4"
+                  >
+
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+
+                      <div className="flex gap-3">
+
+                        <div className="w-7 h-7 rounded-lg bg-[#00d2ff]/10 text-[#00d2ff] flex items-center justify-center text-xs font-bold shrink-0">
+                          {index + 1}
+                        </div>
+
+                        <div>
+
+                          <h4 className="text-sm font-semibold text-white">
+                            {item.title}
+                          </h4>
+
+                          <p className="text-xs text-slate-400 mt-1">
+                            {item.description}
+                          </p>
+
+                        </div>
+
+                      </div>
+
+                      <div className="flex items-center gap-2">
+
+                        {item.priority && (
+                          <span className="text-[10px] px-2 py-1 rounded-full bg-[#00d2ff]/10 text-[#00d2ff]">
+                            {item.priority}
+                          </span>
+                        )}
+
+                        {item.estimatedDuration && (
+                          <span className="text-[10px] text-slate-500">
+                            {item.estimatedDuration}
+                          </span>
+                        )}
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                ))}
+
+              </div>
+
+            )}
+
+          </section>
+
+        </>
       )}
+
     </div>
   );
 }

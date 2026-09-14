@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import './globals.css';
+import 'src/app/globals.css';
 
 export const metadata: Metadata = {
-  title: 'Phlouv — AI Career & Academic Advisor',
-  description: 'Cambodian AI Career & Academic Planning Advisor prototype',
+  title: 'UrFuture — Learn • Plan • Achieve',
+  description: 'AI Career & Academic Planning Advisor — Grounded pathways, diagnostic quizzes, and job readiness.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
