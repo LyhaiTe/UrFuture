@@ -222,6 +222,12 @@ on the next visit until the person signs out.
    GOOGLE_REDIRECT_URI="http://localhost:3000/api/auth/google/callback"
    AUTH_SESSION_SECRET=<output of `openssl rand -hex 32`>
    ```
+
+   Run this in your terminal to generate a secure secret value:
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
+
 5. Apply the `add_google_oauth` migration (adds `authProvider`, `googleId`,
    `avatarUrl` to `User` — additive/non-breaking):
    ```bash
