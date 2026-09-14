@@ -45,6 +45,7 @@ export default function Home() {
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [transcriptCount, setTranscriptCount] = useState(0);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [authBannerError, setAuthBannerError] = useState<string | null>(null);
 
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -83,6 +84,25 @@ export default function Home() {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const authError = params.get('authError');
+
+    if (!authError) {
+      return;
+    }
+
+    const message = GOOGLE_AUTH_ERROR_MESSAGES[authError];
+
+    if (message) {
+      setAuthBannerError(message);
+
+      const nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.delete('authError');
+      window.history.replaceState({}, '', nextUrl.toString());
+    }
   }, []);
 
   const handleAuthSuccess = (user: StudentUser) => {
