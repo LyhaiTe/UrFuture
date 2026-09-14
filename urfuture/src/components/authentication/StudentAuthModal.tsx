@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import UrFutureLogo from './UrFutureLogo';
+import UrFutureLogo from 'src/components/UrFutureLogo';
 import { StudentUser } from '@/types';
 
 interface StudentAuthModalProps {
@@ -55,6 +55,7 @@ export default function StudentAuthModal({
   const [academicTrack, setAcademicTrack] = useState(ACADEMIC_TRACKS[0].value); // NEW STATE
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isGoogleRedirecting, setIsGoogleRedirecting] = useState(false);
 
   if (!isOpen) return null;
 
@@ -149,14 +150,20 @@ export default function StudentAuthModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn">
-      <div className="absolute w-96 h-96 bg-[#00d2ff]/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute w-96 h-96 bg-brand-cyan/15 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="relative w-full max-w-lg bg-[#0c1424] border border-[#1e2f4f] rounded-2xl shadow-2xl shadow-[#00d2ff]/10 overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#172540] bg-[#090f1c]/80">
+      {(loading || isGoogleRedirecting) && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-14 h-14 border-4 border-slate-700 border-t-brand-cyan rounded-full animate-spin" />
+        </div>
+      )}
+
+      <div className="relative w-full max-w-lg bg-dark-panel border border-dark-borderPanelHover rounded-2xl shadow-2xl shadow-brand-cyan/10 overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-dark-divider bg-dark-panelAlt/80">
           <UrFutureLogo variant="navbar" />
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg bg-[#142038] hover:bg-[#1f3154] text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-lg bg-dark-borderSubtle hover:bg-dark-cardHover text-slate-400 hover:text-white flex items-center justify-center transition-colors"
             title="Close modal"
           >
             ✕
@@ -164,15 +171,15 @@ export default function StudentAuthModal({
         </div>
 
         <div className="p-6 overflow-y-auto scrollbar-thin flex-1">
-          <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-[#00d2ff]/15 via-[#10b981]/15 to-[#00d2ff]/10 border border-[#00d2ff]/30 shadow-lg">
+          <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-brand-cyan/15 via-brand-emerald/15 to-brand-cyan/10 border border-brand-cyan/30 shadow-lg">
             <div className="flex items-center justify-between gap-3 mb-2">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#10b981] animate-pulse" />
-                <span className="text-xs font-bold text-[#00d2ff] uppercase tracking-wider">
+                <span className="w-2.5 h-2.5 rounded-full bg-brand-emerald animate-pulse" />
+                <span className="text-xs font-bold text-brand-cyan uppercase tracking-wider">
                   Fast 1-Click Access
                 </span>
               </div>
-              <span className="text-[11px] bg-[#14233e] text-slate-300 font-medium px-2 py-0.5 rounded-md border border-[#233a63]">
+              <span className="text-[11px] bg-dark-cardHover text-slate-300 font-medium px-2 py-0.5 rounded-md border border-dark-borderPanelHover">
                 Preloaded Data
               </span>
             </div>
@@ -182,12 +189,12 @@ export default function StudentAuthModal({
             <button
               onClick={handleDemoLogin}
               disabled={loading}
-              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#00d2ff] to-[#00a8e8] hover:from-[#38dfff] hover:to-[#00b9ff] text-[#070d1a] font-extrabold text-xs sm:text-sm shadow-md shadow-[#00d2ff]/25 transition-all flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
+              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-brand-cyan to-brand-cyanDeep hover:from-brand-cyanBright hover:to-brand-cyanDeepHover text-dark-textOnBrand font-extrabold text-xs sm:text-sm shadow-md shadow-brand-cyan/25 transition-all flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99]"
             >
               {loading ? (
                 <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
               ) : (
-                <svg className="w-4 h-4 text-[#070d1a]" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-4 h-4 text-dark-textOnBrand" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
                 </svg>
               )}
@@ -196,20 +203,53 @@ export default function StudentAuthModal({
           </div>
 
           <div className="relative flex py-2 items-center mb-5">
-            <div className="flex-grow border-t border-[#1b2b48]" />
+            <div className="flex-grow border-t border-dark-borderPanel" />
             <span className="flex-shrink mx-4 text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
               Or Sign In With Account
             </span>
-            <div className="flex-grow border-t border-[#1b2b48]" />
+            <div className="flex-grow border-t border-dark-borderPanel" />
           </div>
 
-          <div className="flex bg-[#080d1a] p-1 rounded-xl border border-[#192742] mb-5">
+          {/* Google OAuth entry point — full-page navigation, since the OAuth
+              handshake happens outside this SPA (see /api/auth/student/google). */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsGoogleRedirecting(true);
+              window.location.href = '/api/auth/student/google';
+            }}
+            disabled={isGoogleRedirecting || loading}
+            title="Continue with Google"
+            className="w-full mb-5 py-2.5 px-4 rounded-xl bg-dark-card hover:bg-dark-cardHover border border-dark-borderPanelHover text-slate-200 hover:text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2.5 transition-colors disabled:opacity-70 disabled:cursor-wait"
+          >
+            {isGoogleRedirecting ? (
+              <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg className="w-4 h-4 shrink-0" viewBox="0 0 48 48">
+                <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
+                <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z" />
+                <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0124 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z" />
+                <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 01-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z" />
+              </svg>
+            )}
+            <span>{isGoogleRedirecting ? 'Redirecting to Google…' : 'Continue with Google'}</span>
+          </button>
+
+          <div className="relative flex py-1 items-center mb-5">
+            <div className="flex-grow border-t border-dark-borderPanel" />
+            <span className="flex-shrink mx-4 text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
+              Or Continue With Email
+            </span>
+            <div className="flex-grow border-t border-dark-borderPanel" />
+          </div>
+
+          <div className="flex bg-dark-bg p-1 rounded-xl border border-dark-divider mb-5">
             <button
               type="button"
               onClick={() => { setMode('login'); setError(null); }}
               className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
                 mode === 'login'
-                  ? 'bg-[#15233d] text-[#00d2ff] border border-[#233a63] shadow-sm'
+                  ? 'bg-dark-cardHover text-brand-cyan border border-dark-borderPanelHover shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -220,7 +260,7 @@ export default function StudentAuthModal({
               onClick={() => { setMode('register'); setError(null); }}
               className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
                 mode === 'register'
-                  ? 'bg-[#15233d] text-[#00d2ff] border border-[#233a63] shadow-sm'
+                  ? 'bg-dark-cardHover text-brand-cyan border border-dark-borderPanelHover shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -241,14 +281,14 @@ export default function StudentAuthModal({
             {mode === 'register' && (
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Full Name <span className="text-[#00d2ff]">*</span>
+                  Full Name <span className="text-brand-cyan">*</span>
                 </label>
                 <input
                   type="text"
                   placeholder="e.g. Sokha Chea or Alex Miller"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#090f1c] border border-[#1b2b48] text-white text-xs focus:outline-none focus:border-[#00d2ff] transition-colors placeholder:text-slate-600"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-dark-panelAlt border border-dark-borderPanel text-white text-xs focus:outline-none focus:border-brand-cyan transition-colors placeholder:text-slate-600"
                   required={mode === 'register'}
                 />
               </div>
@@ -256,14 +296,14 @@ export default function StudentAuthModal({
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Student Email <span className="text-[#00d2ff]">*</span>
+                Student Email <span className="text-brand-cyan">*</span>
               </label>
               <input
                 type="email"
                 placeholder="student@itc.edu.kh or your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#090f1c] border border-[#1b2b48] text-white text-xs focus:outline-none focus:border-[#00d2ff] transition-colors placeholder:text-slate-600"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-dark-panelAlt border border-dark-borderPanel text-white text-xs focus:outline-none focus:border-brand-cyan transition-colors placeholder:text-slate-600"
                 required
               />
             </div>
@@ -277,10 +317,10 @@ export default function StudentAuthModal({
                   <select
                     value={institution}
                     onChange={(e) => setInstitution(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#090f1c] border border-[#1b2b48] text-white text-xs focus:outline-none focus:border-[#00d2ff] transition-colors"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-dark-panelAlt border border-dark-borderPanel text-white text-xs focus:outline-none focus:border-brand-cyan transition-colors"
                   >
                     {INSTITUTIONS.map((inst) => (
-                      <option key={inst} value={inst} className="bg-[#0c1424]">
+                      <option key={inst} value={inst} className="bg-dark-panel">
                         {inst}
                       </option>
                     ))}
@@ -294,10 +334,10 @@ export default function StudentAuthModal({
                   <select
                     value={educationLevel}
                     onChange={(e) => setEducationLevel(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#090f1c] border border-[#1b2b48] text-white text-xs focus:outline-none focus:border-[#00d2ff] transition-colors"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-dark-panelAlt border border-dark-borderPanel text-white text-xs focus:outline-none focus:border-brand-cyan transition-colors"
                   >
                     {EDUCATION_LEVELS.map((lvl) => (
-                      <option key={lvl.value} value={lvl.value} className="bg-[#0c1424]">
+                      <option key={lvl.value} value={lvl.value} className="bg-dark-panel">
                         {lvl.label}
                       </option>
                     ))}
@@ -307,15 +347,15 @@ export default function StudentAuthModal({
                 {/* NEW: Academic Track Selection */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Academic Track <span className="text-[#00d2ff]">*</span>
+                    Academic Track <span className="text-brand-cyan">*</span>
                   </label>
                   <select
                     value={academicTrack}
                     onChange={(e) => setAcademicTrack(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#090f1c] border border-[#1b2b48] text-white text-xs focus:outline-none focus:border-[#00d2ff] transition-colors"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-dark-panelAlt border border-dark-borderPanel text-white text-xs focus:outline-none focus:border-brand-cyan transition-colors"
                   >
                     {ACADEMIC_TRACKS.map((track) => (
-                      <option key={track.value} value={track.value} className="bg-[#0c1424]">
+                      <option key={track.value} value={track.value} className="bg-dark-panel">
                         {track.label}
                       </option>
                     ))}
@@ -330,7 +370,7 @@ export default function StudentAuthModal({
                   Password
                 </label>
                 {mode === 'login' && (
-                  <span className="text-[11px] text-[#00d2ff]/80 hover:underline cursor-pointer">
+                  <span className="text-[11px] text-brand-cyan/80 hover:underline cursor-pointer">
                     Forgot password?
                   </span>
                 )}
@@ -340,14 +380,14 @@ export default function StudentAuthModal({
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#090f1c] border border-[#1b2b48] text-white text-xs focus:outline-none focus:border-[#00d2ff] transition-colors placeholder:text-slate-600"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-dark-panelAlt border border-dark-borderPanel text-white text-xs focus:outline-none focus:border-brand-cyan transition-colors placeholder:text-slate-600"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3 px-4 rounded-xl bg-[#14233e] hover:bg-[#1c3259] text-[#00d2ff] hover:text-white font-bold text-xs sm:text-sm border border-[#21385f] transition-all flex items-center justify-center gap-2"
+              className="w-full mt-2 py-3 px-4 rounded-xl bg-dark-cardHover hover:bg-dark-cardHover text-brand-cyan hover:text-white font-bold text-xs sm:text-sm border border-dark-borderPanelHover transition-all flex items-center justify-center gap-2"
             >
               {loading ? (
                 <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />

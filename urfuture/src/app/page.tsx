@@ -9,8 +9,8 @@ import QuizPanel from '@/components/QuizPanel';
 import CareerFitPanel from '@/components/CareerFitPanel';
 import JobFitPanel from '@/components/JobFitPanel';
 import ChatPanel from '@/components/ChatPanel';
-import LandingPage from '@/components/LandingPage';
-import StudentAuthModal from '@/components/StudentAuthModal';
+import LandingPage from '@/components/authentication/LandingPage';
+import StudentAuthModal from '@/components/authentication/StudentAuthModal';
 import { StudentUser } from '@/types';
 
 const TABS = [
@@ -23,6 +23,18 @@ const TABS = [
 type Tab = (typeof TABS)[number];
 
 const STORAGE_KEY = 'urfuture_active_student_session';
+
+// Human-readable copy for the ?authError=<code> values the Google OAuth
+// routes redirect back with (see src/app/api/auth/google/callback/route.ts).
+const GOOGLE_AUTH_ERROR_MESSAGES: Record<string, string> = {
+  google_cancelled: 'Google sign-in was cancelled.',
+  google_denied: 'Google denied the sign-in request.',
+  google_email_unverified: 'That Google account\u2019s email isn\u2019t verified, so we can\u2019t sign you in with it.',
+  google_state_mismatch: 'Your sign-in session expired before Google redirected back. Please try again.',
+  google_missing_params: 'Something interrupted the Google sign-in redirect. Please try again.',
+  google_exchange_failed: 'We couldn\u2019t complete sign-in with Google. Please try again.',
+  google_not_configured: 'Google sign-in isn\u2019t available right now.',
+};
 
 export default function Home() {
   const [tab, setTab] = useState<Tab>('Workspace');
@@ -164,6 +176,19 @@ export default function Home() {
   if (!currentUser) {
     return (
       <>
+        {authBannerError && (
+          <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[92vw] max-w-md">
+            <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-red-950/90 border border-red-800/60 text-red-200 text-xs shadow-2xl backdrop-blur-md">
+              <svg className="w-4 h-4 shrink-0 mt-0.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="flex-1">{authBannerError}</span>
+              <button onClick={() => setAuthBannerError(null)} className="text-red-300 hover:text-white shrink-0" aria-label="Dismiss">
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
         <LandingPage
           onOpenAuth={(mode) => {
             setAuthMode(mode);
