@@ -32,6 +32,38 @@ interface StudyPlanItem {
   estimatedDuration: string;
 }
 
+// Predefined job titles for Cambodian tech market
+const JOB_TITLES = [
+  'Select a job title...',
+  'Junior Software Engineer',
+  'Frontend Developer',
+  'Backend Developer',
+  'Full-Stack Developer',
+  'Mobile App Developer (iOS/Android)',
+  'Data Engineer',
+  'Data Analyst',
+  'Business Analyst',
+  'Machine Learning Engineer',
+  'AI Engineer',
+  'DevOps Engineer',
+  'Cloud Engineer',
+  'Cybersecurity Analyst',
+  'QA / Test Engineer',
+  'UI/UX Designer',
+  'Product Manager',
+  'Database Administrator',
+  'Network Engineer',
+  'IT Support Specialist',
+  'Systems Administrator',
+  'Technical Project Manager',
+  'Scrum Master',
+  'Solutions Architect',
+  'Game Developer',
+  'Embedded Systems Engineer',
+  'Blockchain Developer',
+  'Other / Custom Role',
+];
+
 export default function JobFitPanel({ userId }: { userId: string }) {
   const [jobTitle, setJobTitle] = useState('');
   const [jobDescription, setJobDescription] = useState('');
@@ -40,6 +72,8 @@ export default function JobFitPanel({ userId }: { userId: string }) {
   const [busy, setBusy] = useState(false);
   const [planBusy, setPlanBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [customTitle, setCustomTitle] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
 
   /*
    * -------------------------------------------------------
@@ -48,8 +82,15 @@ export default function JobFitPanel({ userId }: { userId: string }) {
    * This still calls the existing /api/job/match endpoint.
    */
   async function checkFit() {
-    if (!jobTitle.trim() || !jobDescription.trim()) {
-      setError('Please enter a job title and job description.');
+    const effectiveTitle = showCustomInput ? customTitle : jobTitle;
+
+    if (!effectiveTitle.trim() || effectiveTitle === 'Select a job title...') {
+      setError('Please select or enter a job title.');
+      return;
+    }
+
+    if (!jobDescription.trim()) {
+      setError('Please enter a job description.');
       return;
     }
 
@@ -71,7 +112,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
         },
         body: JSON.stringify({
           userId,
-          jobTitle,
+          jobTitle: effectiveTitle,
           jobDescription,
         }),
       });
@@ -140,6 +181,8 @@ export default function JobFitPanel({ userId }: { userId: string }) {
   ) {
     setJobTitle(title);
     setJobDescription(description);
+    setShowCustomInput(false);
+    setCustomTitle('');
     setResult(null);
     setStudyPlan([]);
     setError(null);
@@ -211,7 +254,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
             onClick={() =>
               useSample(
                 'Data & Business Analyst',
-                'Seeking a Data and Business Analyst with skills 67676767676767 skibidi toilet in SQL, database systems, data analysis, dashboards, business intelligence, communication, reporting, Excel, and analytical problem solving.'
+                'Seeking a Data and Business Analyst with skills in SQL, database systems, data analysis, dashboards, business intelligence, communication, reporting, Excel, and analytical problem solving.'
               )
             }
             className="px-3 py-1.5 rounded-lg border border-[#1b2947] bg-[#09111f] text-xs text-slate-300 hover:border-[#00d2ff]/50 hover:text-[#00d2ff] transition"
@@ -221,7 +264,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
 
         </div>
 
-        {/* Job title */}
+        {/* Job title dropdown */}
 
         <div className="mt-4">
 
@@ -229,13 +272,74 @@ export default function JobFitPanel({ userId }: { userId: string }) {
             Job Title
           </label>
 
-          <input
-            type="text"
-            value={jobTitle}
-            onChange={(e) => setJobTitle(e.target.value)}
-            placeholder="e.g. Junior Data Engineer, Full-Stack Developer"
-            className="mt-2 w-full bg-[#09111f] border border-[#1b2947] rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none focus:border-[#00d2ff]/60 transition"
-          />
+          <div className="relative mt-2">
+            <select
+              value={showCustomInput ? 'Other / Custom Role' : jobTitle}
+              onChange={(e) => {
+                if (e.target.value === 'Other / Custom Role') {
+                  setShowCustomInput(true);
+                  setJobTitle('');
+                } else {
+                  setShowCustomInput(false);
+                  setJobTitle(e.target.value);
+                  setCustomTitle('');
+                }
+                setResult(null);
+                setStudyPlan([]);
+                setError(null);
+              }}
+              className="w-full appearance-none bg-[#09111f] border border-[#1b2947] rounded-xl px-4 py-3 pr-10 text-sm text-white outline-none focus:border-[#00d2ff]/60 transition cursor-pointer"
+            >
+              {JOB_TITLES.map((title) => (
+                <option
+                  key={title}
+                  value={title}
+                  className="bg-[#0d1526] text-white"
+                  disabled={title === 'Select a job title...'}
+                >
+                  {title}
+                </option>
+              ))}
+            </select>
+
+            {/* Custom dropdown arrow */}
+            <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2">
+              <svg
+                className="w-4 h-4 text-slate-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </div>
+          </div>
+
+          {/* Custom job title input (shown when "Other" is selected) */}
+          {showCustomInput && (
+            <div className="mt-3">
+              <label className="text-[10px] uppercase tracking-wider font-bold text-[#00d2ff]">
+                Enter Your Custom Job Title
+              </label>
+              <input
+                type="text"
+                value={customTitle}
+                onChange={(e) => {
+                  setCustomTitle(e.target.value);
+                  setResult(null);
+                  setStudyPlan([]);
+                  setError(null);
+                }}
+                placeholder="e.g. Junior Robotics Engineer, Fintech Analyst"
+                className="mt-2 w-full bg-[#09111f] border border-[#00d2ff]/40 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none focus:border-[#00d2ff]/60 transition"
+              />
+            </div>
+          )}
 
         </div>
 
@@ -249,7 +353,12 @@ export default function JobFitPanel({ userId }: { userId: string }) {
 
           <textarea
             value={jobDescription}
-            onChange={(e) => setJobDescription(e.target.value)}
+            onChange={(e) => {
+              setJobDescription(e.target.value);
+              setResult(null);
+              setStudyPlan([]);
+              setError(null);
+            }}
             placeholder="Paste the job description or role requirements here..."
             rows={6}
             className="mt-2 w-full resize-none bg-[#09111f] border border-[#1b2947] rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none focus:border-[#00d2ff]/60 transition"
@@ -268,7 +377,8 @@ export default function JobFitPanel({ userId }: { userId: string }) {
             onClick={checkFit}
             disabled={
               busy ||
-              !jobTitle.trim() ||
+              (!showCustomInput && (!jobTitle || jobTitle === 'Select a job title...')) ||
+              (showCustomInput && !customTitle.trim()) ||
               jobDescription.trim().length < 20
             }
             className="rounded-xl bg-[#00d2ff] hover:bg-[#00bfe6] disabled:opacity-40 disabled:cursor-not-allowed text-[#080d1a] px-6 py-2.5 text-xs font-bold shadow-md shadow-[#00d2ff]/20 transition flex items-center justify-center gap-2"

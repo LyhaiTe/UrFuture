@@ -4,8 +4,6 @@ import { useEffect, useState, useRef } from 'react';
 import UrFutureLogo from '@/components/UrFutureLogo';
 import DashboardWorkspace from '@/components/DashboardWorkspace';
 import KnowledgeMapPanel from '@/components/KnowledgeMapPanel';
-import TranscriptUpload from '@/components/TranscriptUpload';
-import QuizPanel from '@/components/QuizPanel';
 import CareerFitPanel from '@/components/CareerFitPanel';
 import JobFitPanel from '@/components/JobFitPanel';
 import ChatPanel from '@/components/ChatPanel';
@@ -43,7 +41,7 @@ export default function Home() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
-  const [transcriptCount, setTranscriptCount] = useState(0);
+  const [isCopilotHovered, setIsCopilotHovered] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [authBannerError, setAuthBannerError] = useState<string | null>(null);
 
@@ -436,9 +434,6 @@ export default function Home() {
             studentName={currentUser.name}
             institution={currentUser.institution}
             onNavigateTab={setTab}
-            onOpenCopilot={() =>
-              setIsCopilotOpen(true)
-            }
           />
         )}
 
@@ -448,27 +443,6 @@ export default function Home() {
           <div className="flex flex-col gap-6">
             <KnowledgeMapPanel
               userId={currentUser.id}
-            />
-
-            <TranscriptUpload
-              userId={currentUser.id}
-              onUploaded={() =>
-                setTranscriptCount((c) => c + 1)
-              }
-            />
-
-            {transcriptCount > 0 && (
-              <p className="text-xs text-[#34d399] font-medium px-1">
-                ✓ {transcriptCount} transcript(s) processed
-                in this active session.
-              </p>
-            )}
-
-            <QuizPanel
-              userId={currentUser.id}
-              onNavigateToCareers={() =>
-                setTab('Career paths')
-              }
             />
           </div>
         )}
@@ -490,6 +464,65 @@ export default function Home() {
         )}
       </main>
 
+      {/* Shared Copilot launcher remains visible while dashboard tabs change. */}
+      <div className="fixed bottom-8 right-8 z-50">
+        <div
+          className={`absolute bottom-full right-0 mb-6 transition-all duration-300 ${
+            isCopilotHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
+          }`}
+        >
+          <div className="relative">
+            <div className="bg-white text-dark-bg px-8 py-4 rounded-[2rem] shadow-xl shadow-black/20 min-w-[220px]">
+              <div className="text-center leading-tight">
+                <div className="text-sm font-bold">Hello! ជំរាបសួរ!</div>
+                <div className="text-sm font-bold mt-1">Need help?</div>
+              </div>
+            </div>
+            <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2">
+              <svg width="24" height="16" viewBox="0 0 24 16" fill="none" aria-hidden="true">
+                <path d="M2 0C2 0 8 14 12 14C16 14 22 0 22 0" fill="white" stroke="white" strokeWidth="1" strokeLinecap="round" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setIsCopilotOpen(true)}
+          onMouseEnter={() => setIsCopilotHovered(true)}
+          onMouseLeave={() => setIsCopilotHovered(false)}
+          aria-label="Open UrFuture Copilot"
+          className="relative group animate-scale-in"
+        >
+          <div className="relative w-20 h-20 animate-float">
+            <div className="absolute inset-0 bg-brand-cyan/30 rounded-3xl blur-xl animate-pulse" />
+            <svg viewBox="0 0 80 80" className="w-full h-full drop-shadow-2xl animate-pulse-glow transition-transform group-hover:scale-110" aria-hidden="true">
+              <defs>
+                <linearGradient id="robotGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#06b6d4" />
+                  <stop offset="100%" stopColor="#0891b2" />
+                </linearGradient>
+              </defs>
+              <rect x="10" y="15" width="60" height="50" rx="12" fill="url(#robotGradient)" />
+              <line x1="40" y1="15" x2="40" y2="5" stroke="#06b6d4" strokeWidth="3" strokeLinecap="round" />
+              <circle cx="40" cy="5" r="3" fill="#10b981" className="animate-pulse" />
+              <g className="animate-blink">
+                <ellipse cx="28" cy="35" rx="8" ry="10" fill="#1e293b" />
+                <circle cx="28" cy="35" r="5" fill="#10b981" />
+                <circle cx="28" cy="35" r="2" fill="#ffffff" />
+                <ellipse cx="52" cy="35" rx="8" ry="10" fill="#1e293b" />
+                <circle cx="52" cy="35" r="5" fill="#10b981" />
+                <circle cx="52" cy="35" r="2" fill="#ffffff" />
+              </g>
+              <rect x="30" y="52" width="20" height="4" rx="2" fill="#1e293b" />
+              <rect x="5" y="25" width="5" height="30" rx="2" fill="#0891b2" />
+              <rect x="70" y="25" width="5" height="30" rx="2" fill="#0891b2" />
+            </svg>
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-brand-emerald rounded-full animate-ping" style={{ animationDuration: '3s' }} />
+          </div>
+        </button>
+      </div>
+
       {/* ================================================================ */}
       {/* CHATBOT MODAL */}
       {/* ================================================================ */}
@@ -504,16 +537,6 @@ export default function Home() {
         />
       )}
 
-      {/* ================================================================ */}
-      {/* FOOTER */}
-      {/* ================================================================ */}
-
-      <footer className="mt-auto border-t border-[#142038] py-6 px-4 text-center text-xs text-slate-500">
-        <p>
-          UrFuture — Learn • Plan • Achieve. Decision support
-          &amp; grounded career pathways for students.
-        </p>
-      </footer>
     </div>
   );
 }
