@@ -17,6 +17,13 @@ interface Skill {
   description: string;
 }
 
+interface QuizQuestion {
+  id: number;
+  question: string;
+  options: string[];
+  correctAnswer: number;
+}
+
 const skills: Skill[] = [
   {
     id: 'programming',
@@ -24,7 +31,8 @@ const skills: Skill[] = [
     category: 'Software Engineering',
     progress: 100,
     status: 'Completed',
-    description: 'Core programming concepts, logic, variables, functions, and control flow.',
+    description:
+      'Core programming concepts, logic, variables, functions, and control flow.',
   },
   {
     id: 'oop',
@@ -32,7 +40,8 @@ const skills: Skill[] = [
     category: 'Software Engineering',
     progress: 90,
     status: 'Completed',
-    description: 'Classes, objects, inheritance, encapsulation, and polymorphism.',
+    description:
+      'Classes, objects, inheritance, encapsulation, and polymorphism.',
   },
   {
     id: 'database',
@@ -40,7 +49,8 @@ const skills: Skill[] = [
     category: 'Data',
     progress: 82,
     status: 'Completed',
-    description: 'Relational databases, SQL, schema design, and data management.',
+    description:
+      'Relational databases, SQL, schema design, and data management.',
   },
   {
     id: 'dsa',
@@ -48,7 +58,8 @@ const skills: Skill[] = [
     category: 'Software Engineering',
     progress: 68,
     status: 'In Progress',
-    description: 'Arrays, linked structures, trees, graphs, searching, and sorting.',
+    description:
+      'Arrays, linked structures, trees, graphs, searching, and sorting.',
   },
   {
     id: 'cloud',
@@ -56,7 +67,8 @@ const skills: Skill[] = [
     category: 'Infrastructure',
     progress: 55,
     status: 'In Progress',
-    description: 'Cloud infrastructure, deployment, networking, and scalable services.',
+    description:
+      'Cloud infrastructure, deployment, networking, and scalable services.',
   },
   {
     id: 'ml',
@@ -64,7 +76,8 @@ const skills: Skill[] = [
     category: 'AI & Data',
     progress: 30,
     status: 'Incomplete',
-    description: 'Data preparation, model training, evaluation, and predictive systems.',
+    description:
+      'Data preparation, model training, evaluation, and predictive systems.',
   },
 ];
 
@@ -96,12 +109,85 @@ const relationships = [
   },
 ];
 
+const demoQuestions: QuizQuestion[] = [
+  {
+    id: 1,
+    question:
+      'Which of the following is a key principle of effective communication?',
+    options: ['Clarity', 'Complexity', 'Ambiguity', 'Repetition'],
+    correctAnswer: 0,
+  },
+  {
+    id: 2,
+    question: 'What does active listening involve?',
+    options: [
+      'Ignoring feedback',
+      'Preparing a response while someone speaks',
+      'Fully focusing on and understanding the speaker',
+      'Speaking more than the other person',
+    ],
+    correctAnswer: 2,
+  },
+  {
+    id: 3,
+    question: 'Which is an example of non-verbal communication?',
+    options: [
+      'Email',
+      'Body language',
+      'Report writing',
+      'Phone call',
+    ],
+    correctAnswer: 1,
+  },
+  {
+    id: 4,
+    question:
+      'What is the main purpose of feedback in communication?',
+    options: [
+      'To make communication longer',
+      'To confirm understanding and improve communication',
+      'To avoid discussion',
+      'To replace listening',
+    ],
+    correctAnswer: 1,
+  },
+  {
+    id: 5,
+    question: 'Which skill helps reduce misunderstandings?',
+    options: [
+      'Clear communication',
+      'Avoiding questions',
+      'Using complicated language',
+      'Ignoring feedback',
+    ],
+    correctAnswer: 0,
+  },
+];
+
 export default function KnowledgeMapPanel({
   userId,
 }: KnowledgeMapPanelProps) {
-  const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
-  const [selectedTerm, setSelectedTerm] = useState('Year1');
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [selectedSkill, setSelectedSkill] =
+    useState<Skill | null>(null);
+
+  // Transcript
+  const [academicTerm, setAcademicTerm] = useState('Year 1');
+  const [transcriptFile, setTranscriptFile] =
+    useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [transcriptParsed, setTranscriptParsed] =
+    useState(false);
+
+  // Quiz
+  const [quizOpen, setQuizOpen] = useState(false);
+  const [quizLoading, setQuizLoading] = useState(false);
+  const [quizExpanded, setQuizExpanded] = useState(false);
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [answers, setAnswers] = useState<
+    Record<number, number>
+  >({});
+  const [quizSubmitted, setQuizSubmitted] =
+    useState(false);
 
   const completedSkills = skills.filter(
     (skill) => skill.status === 'Completed'
@@ -112,8 +198,10 @@ export default function KnowledgeMapPanel({
   ).length;
 
   const averageProgress = Math.round(
-    skills.reduce((total, skill) => total + skill.progress, 0) /
-      skills.length
+    skills.reduce(
+      (total, skill) => total + skill.progress,
+      0
+    ) / skills.length
   );
 
   const getStatusClasses = (status: SkillStatus) => {
@@ -128,47 +216,97 @@ export default function KnowledgeMapPanel({
     return 'bg-slate-700/30 text-slate-400 border-slate-600/20';
   };
 
-  const getCardBorderColor = (status: SkillStatus) => {
-    if (status === 'Completed') return 'border-[#10b981]/30 hover:border-[#10b981]/60';
-    if (status === 'In Progress') return 'border-[#00d2ff]/30 hover:border-[#00d2ff]/60';
-    return 'border-slate-600/30 hover:border-slate-500/60';
-  };
+  // ============================================================
+  // FRONTEND-ONLY TRANSCRIPT PROCESSING
+  // ============================================================
 
-  const getCardGlow = (status: SkillStatus) => {
-    if (status === 'Completed') return 'hover:shadow-[#10b981]/10';
-    if (status === 'In Progress') return 'hover:shadow-[#00d2ff]/10';
-    return 'hover:shadow-slate-500/10';
-  };
+  async function handleUploadTranscript() {
+    if (!transcriptFile) return;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setSelectedFile(e.target.files[0].name);
-    }
-  };
+    setUploading(true);
+    setTranscriptParsed(false);
 
-  return (
-    <section className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-5 sm:p-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    // Frontend demo only.
+    // No API is called here.
+    await new Promise((resolve) =>
+      setTimeout(resolve, 800)
+    );
+
+    setTranscriptParsed(true);
+    setUploading(false);
+  }
+
+  // ============================================================
+  // GENERATE QUIZ
+  // Opens right panel immediately and loads there.
+  // ============================================================
+
+  async function handleGenerateQuiz() {
+    if (!transcriptParsed) return;
+
+    setQuizOpen(true);
+    setQuizLoading(true);
+    setQuizExpanded(false);
+
+    setCurrentQuestion(0);
+    setAnswers({});
+    setQuizSubmitted(false);
+
+    // Frontend demo generation.
+    await new Promise((resolve) =>
+      setTimeout(resolve, 1200)
+    );
+
+    setQuizLoading(false);
+  }
+
+  function selectAnswer(optionIndex: number) {
+    setAnswers((previous) => ({
+      ...previous,
+      [currentQuestion]: optionIndex,
+    }));
+  }
+
+  const score = demoQuestions.reduce(
+    (total, question, index) => {
+      if (
+        answers[index] === question.correctAnswer
+      ) {
+        return total + 1;
+      }
+
+      return total;
+    },
+    0
+  );
+
+  // ============================================================
+  // UPLOAD CARD
+  // ============================================================
+
+  const uploadCard = (
+    <div className="bg-[#09111f] border border-[#1b2947] rounded-xl p-5">
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#00d2ff]" />
+            <span className="w-2 h-2 rounded-full bg-[#34d399]" />
 
-            <h2 className="text-lg font-bold text-white">
-              Knowledge Map
-            </h2>
+            <h3 className="text-sm font-bold text-white">
+              Upload Coursework Transcripts
+            </h3>
           </div>
 
-          <p className="text-xs text-slate-400 mt-2">
-            Track your verified skills, knowledge areas, relationships,
-            and learning progress.
+          <p className="text-[11px] text-slate-500 mt-1">
+            Add your coursework transcript before generating
+            a diagnostic quiz.
           </p>
         </div>
 
-        <div className="px-3 py-1.5 rounded-full bg-[#00d2ff]/10 border border-[#00d2ff]/30">
-          <span className="text-xs font-bold text-[#00d2ff]">
-            {averageProgress}% overall coverage
+        {transcriptParsed && (
+          <span className="px-3 py-1 rounded-full bg-[#10b981]/10 border border-[#10b981]/30 text-[10px] font-bold text-[#34d399]">
+            Transcript Ready
           </span>
-        </div>
+        )}
       </div>
       <div className="mt-6 bg-[#0a1628] border border-[#1b2947] rounded-xl p-5 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
@@ -188,382 +326,702 @@ export default function KnowledgeMapPanel({
           </span>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="flex items-center gap-2 shrink-0">
-            <label className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
-              Academic Term
-            </label>
-            <select
-              value={selectedTerm}
-              onChange={(e) => setSelectedTerm(e.target.value)}
-              className="bg-[#09111f] border border-[#1b2947] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#00d2ff]/50 transition-colors"
-            >
-              <option value="Year1">Year 1</option>
-              <option value="Year2">Year 2</option>
-              <option value="Year3">Year 3</option>
-              <option value="Year4">Year 4</option>
-            </select>
-          </div>
+      <div className="mt-5 grid grid-cols-1 xl:grid-cols-[120px_minmax(0,1fr)] gap-4">
+        {/* Academic Term */}
 
-          <div className="flex-1 flex items-center gap-2">
-            <label className="text-[10px] uppercase tracking-wider text-slate-500 font-bold shrink-0">
-              Transcript File (.PDF, .CSV, .TXT)
-            </label>
-            <div className="flex-1 flex items-center bg-[#09111f] border border-dashed border-[#1b2947] rounded-lg px-3 py-2">
-              <span className="text-xs text-slate-500 flex-1 truncate">
-                {selectedFile || 'Select or drop transcript file...'}
-              </span>
-              <label className="cursor-pointer text-xs font-semibold text-[#00d2ff] hover:text-[#00bfe6] transition-colors shrink-0 ml-2">
-                Browse
-                <input
-                  type="file"
-                  accept=".pdf,.csv,.txt"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-              </label>
-            </div>
-          </div>
+        <div>
+          <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-2">
+            Academic Term
+          </label>
 
-          <button className="shrink-0 bg-[#00d2ff] hover:bg-[#00bfe6] text-[#070d1a] font-bold text-xs px-5 py-2.5 rounded-lg transition-all hover:scale-[1.02] active:scale-[0.98]">
-            Upload &amp; Parse
-          </button>
+          <select
+            value={academicTerm}
+            onChange={(event) =>
+              setAcademicTerm(event.target.value)
+            }
+            className="w-full h-11 rounded-lg bg-[#0d1526] border border-[#1b2947] px-3 text-xs text-slate-200 outline-none focus:border-[#00d2ff]/60"
+          >
+            <option>Year 1</option>
+            <option>Year 2</option>
+            <option>Year 3</option>
+            <option>Year 4</option>
+          </select>
+        </div>
+
+        {/* Transcript */}
+
+        <div>
+          <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-2">
+            Transcript File
+          </label>
+
+          <label className="h-11 flex items-center justify-between gap-3 rounded-lg bg-[#0d1526] border border-dashed border-[#263858] px-4 cursor-pointer hover:border-[#00d2ff]/60 transition-colors">
+            <span className="text-xs text-slate-400 truncate">
+              {transcriptFile
+                ? transcriptFile.name
+                : 'Select transcript PDF...'}
+            </span>
+
+            <span className="text-xs font-bold text-[#00d2ff]">
+              Browse
+            </span>
+
+            <input
+              type="file"
+              accept=".pdf"
+              className="hidden"
+              onChange={(event) => {
+                const file =
+                  event.target.files?.[0] ?? null;
+
+                setTranscriptFile(file);
+                setTranscriptParsed(false);
+                setQuizOpen(false);
+                setQuizExpanded(false);
+              }}
+            />
+          </label>
         </div>
       </div>
 
-      <div className="mt-4 bg-[#0a1628] border border-[#1b2947] rounded-xl p-5 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#10b981]" />
-              <h3 className="text-base font-bold text-white">
-                Diagnostic Knowledge Quiz
-              </h3>
-            </div>
-            <p className="text-xs text-slate-400 mt-2">
-              Test your grasp across all uploaded course subjects to benchmark your career readiness.
-            </p>
-          </div>
-          <button className="shrink-0 bg-[#00d2ff] hover:bg-[#00bfe6] text-[#070d1a] font-bold text-xs px-5 py-2.5 rounded-lg shadow-lg shadow-[#00d2ff]/30 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Generate Quiz From Transcripts
-          </button>
-        </div>
+      {/* Buttons */}
 
-        {/* Empty state */}
-        <div className="bg-[#09111f] border border-[#1b2947] rounded-xl p-8 text-center">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-[#00d2ff]/10 border border-[#00d2ff]/30 flex items-center justify-center mb-4">
-            <svg className="w-7 h-7 text-[#00d2ff]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
-          </div>
-          <h4 className="text-sm font-bold text-white mb-2">No active quiz attempt</h4>
-          <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
-            Upload your course transcripts above, then click "Generate Quiz" to test your actual competency levels.
-          </p>
-        </div>
+      <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
+        <button
+          type="button"
+          onClick={handleUploadTranscript}
+          disabled={!transcriptFile || uploading}
+          className="h-11 px-5 rounded-lg bg-[#00d2ff] hover:bg-[#00bfe6] disabled:bg-slate-700/50 disabled:text-slate-500 disabled:cursor-not-allowed text-[#070d1a] text-xs font-bold transition-all"
+        >
+          {uploading
+            ? 'Processing...'
+            : 'Upload & Parse'}
+        </button>
+
+        <button
+          type="button"
+          onClick={handleGenerateQuiz}
+          disabled={!transcriptParsed}
+          className="h-11 px-5 rounded-lg bg-[#00d2ff] hover:bg-[#00bfe6] disabled:bg-slate-700/50 disabled:text-slate-500 disabled:cursor-not-allowed text-[#070d1a] text-xs font-bold transition-all shadow-lg shadow-[#00d2ff]/10"
+        >
+          Generate Quiz
+        </button>
       </div>
-      <div className="mt-6 bg-gradient-to-r from-[#00d2ff]/5 to-[#34d399]/5 border border-[#00d2ff]/20 rounded-xl p-5">
+
+      <div className="mt-3 flex items-center gap-2">
+        <span
+          className={`w-1.5 h-1.5 rounded-full ${
+            transcriptParsed
+              ? 'bg-[#34d399]'
+              : 'bg-slate-600'
+          }`}
+        />
+
+        <p className="text-[10px] text-slate-500">
+          {transcriptParsed
+            ? 'Transcript processed. You can now generate your quiz.'
+            : 'Upload and process a transcript to enable Generate Quiz.'}
+        </p>
+      </div>
+    </div>
+  );
+
+  // ============================================================
+  // KNOWLEDGE MAP
+  // ============================================================
+
+  const knowledgeMapContent = (
+    <div className="space-y-6">
+      {uploadCard}
+
+      <section className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-5 sm:p-6">
+        {/* Header */}
+
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <p className="text-[10px] uppercase tracking-wider font-bold text-[#00d2ff]">
-              Recommended Next Step
-            </p>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#00d2ff]" />
 
-            <h3 className="text-sm font-bold text-white mt-1">
-              Strengthen Data Structures & Algorithms
-            </h3>
+              <h2 className="text-lg font-bold text-white">
+                Knowledge Map
+              </h2>
+            </div>
 
-            <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-              Improving this competency will strengthen your foundation
-              for Machine Learning and advanced software engineering.
+            <p className="text-xs text-slate-400 mt-2">
+              Track your verified skills, knowledge areas,
+              relationships, and learning progress.
             </p>
           </div>
 
-          <div className="shrink-0">
-            <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#00d2ff]/10 border border-[#00d2ff]/30 text-xs font-bold text-[#00d2ff]">
-              68% complete
+          <div className="px-3 py-1.5 rounded-full bg-[#00d2ff]/10 border border-[#00d2ff]/30">
+            <span className="text-xs font-bold text-[#00d2ff]">
+              {averageProgress}% overall coverage
             </span>
           </div>
         </div>
-      </div>
 
-      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Skills Mapped Card */}
-        <div className="bg-[#09111f] border border-[#1b2947] rounded-xl p-5 hover:border-[#00d2ff]/30 transition-all hover:shadow-lg hover:shadow-[#00d2ff]/5 group">
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-lg bg-[#00d2ff]/10 border border-[#00d2ff]/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <svg className="w-5 h-5 text-[#00d2ff]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total</span>
-          </div>
-          <p className="text-3xl font-extrabold text-white">{skills.length}</p>
-          <p className="text-[11px] text-slate-400 mt-1">Verified competencies</p>
-        </div>
+        {/* Summary */}
 
-        {/* Completed Card */}
-        <div className="bg-[#09111f] border border-[#10b981]/20 rounded-xl p-5 hover:border-[#10b981]/40 transition-all hover:shadow-lg hover:shadow-[#10b981]/5 group">
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-lg bg-[#10b981]/10 border border-[#10b981]/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <svg className="w-5 h-5 text-[#34d399]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <span className="text-[10px] font-bold text-[#34d399] uppercase tracking-wider">Strong</span>
-          </div>
-          <p className="text-3xl font-extrabold text-[#34d399]">{completedSkills}</p>
-          <p className="text-[11px] text-slate-400 mt-1">Strong competencies</p>
-        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+          <div className="bg-[#09111f] border border-[#1b2947] rounded-xl p-4">
+            <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+              Skills Mapped
+            </p>
 
-        {/* In Progress Card */}
-        <div className="bg-[#09111f] border border-[#00d2ff]/20 rounded-xl p-5 hover:border-[#00d2ff]/40 transition-all hover:shadow-lg hover:shadow-[#00d2ff]/5 group">
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-lg bg-[#00d2ff]/10 border border-[#00d2ff]/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <svg className="w-5 h-5 text-[#00d2ff]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <span className="text-[10px] font-bold text-[#00d2ff] uppercase tracking-wider">Active</span>
-          </div>
-          <p className="text-3xl font-extrabold text-[#00d2ff]">{inProgressSkills}</p>
-          <p className="text-[11px] text-slate-400 mt-1">Currently developing</p>
-        </div>
+            <p className="text-2xl font-extrabold text-white mt-2">
+              {skills.length}
+            </p>
 
-        {/* Overall Progress Card */}
-        <div className="bg-[#09111f] border border-[#1b2947] rounded-xl p-5 hover:border-[#00d2ff]/30 transition-all hover:shadow-lg hover:shadow-[#00d2ff]/5 group">
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-lg bg-[#00d2ff]/10 border border-[#00d2ff]/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <svg className="w-5 h-5 text-[#00d2ff]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-            </div>
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Progress</span>
-          </div>
-          <p className="text-3xl font-extrabold text-[#00d2ff]">{averageProgress}%</p>
-          <div className="mt-2 h-1.5 bg-[#17253d] rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-[#00d2ff] to-[#34d399] rounded-full"
-              style={{ width: `${averageProgress}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-8">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-sm font-bold text-white">
-              Skills & Knowledge Areas
-            </h3>
-
-            <p className="text-[11px] text-slate-500 mt-1">
-              Select a skill to view more information.
+            <p className="text-[10px] text-slate-500 mt-1">
+              Verified competencies
             </p>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {skills.map((skill) => {
-            const isSelected = selectedSkill?.id === skill.id;
+          <div className="bg-[#09111f] border border-[#1b2947] rounded-xl p-4">
+            <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+              Completed
+            </p>
 
-            return (
-              <button
-                type="button"
-                key={skill.id}
-                onClick={() =>
-                  setSelectedSkill(isSelected ? null : skill)
-                }
-                className={`text-left bg-[#09111f] border rounded-xl p-4 transition-all ${
-                  isSelected
-                    ? 'border-[#00d2ff] shadow-[0_0_20px_rgba(0,210,255,0.08)]'
-                    : `border-[#1b2947] hover:border-[#00d2ff]/40 ${getCardBorderColor(skill.status)} ${getCardGlow(skill.status)}`
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h4 className="text-sm font-semibold text-white">
-                      {skill.name}
-                    </h4>
+            <p className="text-2xl font-extrabold text-[#34d399] mt-2">
+              {completedSkills}
+            </p>
 
-                    <p className="text-[11px] text-slate-500 mt-1">
-                      {skill.category}
-                    </p>
-                  </div>
-
-                  <span
-                    className={`text-[10px] font-bold px-2 py-1 rounded-full border ${getStatusClasses(
-                      skill.status
-                    )}`}
-                  >
-                    {skill.status}
-                  </span>
-                </div>
-
-                <div className="mt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] text-slate-500">
-                      Competency
-                    </span>
-
-                    <span className="text-xs font-bold text-slate-300">
-                      {skill.progress}%
-                    </span>
-                  </div>
-
-                  <div className="h-1.5 bg-[#17253d] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-[#00d2ff] to-[#34d399] rounded-full transition-all duration-500"
-                      style={{
-                        width: `${skill.progress}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {isSelected && (
-                  <div className="mt-4 pt-4 border-t border-[#1b2947]">
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      {skill.description}
-                    </p>
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ============================================================= */}
-      {/* SKILL RELATIONSHIPS */}
-      {/* ============================================================= */}
-
-      <div className="mt-8">
-        <div className="mb-4">
-          <h3 className="text-sm font-bold text-white">
-            Skill Relationships
-          </h3>
-
-          <p className="text-[11px] text-slate-500 mt-1">
-            See how your knowledge areas build on and support one another.
-          </p>
-        </div>
-
-        <div className="bg-[#09111f] border border-[#1b2947] rounded-xl p-5">
-          {/* Legend */}
-
-          <div className="flex flex-wrap items-center gap-4 mb-6 pb-4 border-b border-[#1b2947]">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#34d399]" />
-              <span className="text-[10px] text-slate-400">
-                Completed
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#00d2ff]" />
-              <span className="text-[10px] text-slate-400">
-                In Progress
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-slate-600" />
-              <span className="text-[10px] text-slate-400">
-                Incomplete
-              </span>
-            </div>
+            <p className="text-[10px] text-slate-500 mt-1">
+              Strong competencies
+            </p>
           </div>
 
-          {/* Relationship rows */}
+          <div className="bg-[#09111f] border border-[#1b2947] rounded-xl p-4">
+            <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+              In Progress
+            </p>
 
-          <div className="space-y-3">
-            {relationships.map((relationship, index) => {
-              const fromSkill = skills.find(
-                (skill) => skill.name === relationship.from
-              );
+            <p className="text-2xl font-extrabold text-[#00d2ff] mt-2">
+              {inProgressSkills}
+            </p>
 
-              const toSkill = skills.find(
-                (skill) => skill.name === relationship.to
-              );
+            <p className="text-[10px] text-slate-500 mt-1">
+              Currently developing
+            </p>
+          </div>
+
+          <div className="bg-[#09111f] border border-[#1b2947] rounded-xl p-4">
+            <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+              Overall Progress
+            </p>
+
+            <p className="text-2xl font-extrabold text-[#00d2ff] mt-2">
+              {averageProgress}%
+            </p>
+
+            <div className="mt-2 h-1.5 bg-[#17253d] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-[#00d2ff] to-[#34d399] rounded-full"
+                style={{
+                  width: `${averageProgress}%`,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Skills */}
+
+        <div className="mt-8">
+          <h3 className="text-sm font-bold text-white">
+            Skills & Knowledge Areas
+          </h3>
+
+          <p className="text-[11px] text-slate-500 mt-1 mb-4">
+            Select a skill to view more information.
+          </p>
+
+          <div
+            className={`grid grid-cols-1 ${
+              quizOpen && !quizExpanded
+                ? ''
+                : 'md:grid-cols-2'
+            } gap-4`}
+          >
+            {skills.map((skill) => {
+              const isSelected =
+                selectedSkill?.id === skill.id;
 
               return (
-                <div
-                  key={`${relationship.from}-${relationship.to}-${index}`}
-                  className="grid grid-cols-[1fr_auto_1fr] items-center gap-3"
+                <button
+                  type="button"
+                  key={skill.id}
+                  onClick={() =>
+                    setSelectedSkill(
+                      isSelected ? null : skill
+                    )
+                  }
+                  className={`text-left bg-[#09111f] border rounded-xl p-4 transition-all ${
+                    isSelected
+                      ? 'border-[#00d2ff]'
+                      : 'border-[#1b2947] hover:border-[#00d2ff]/40'
+                  }`}
                 >
-                  {/* FROM */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h4 className="text-sm font-semibold text-white">
+                        {skill.name}
+                      </h4>
 
-                  <div className="bg-[#0d1526] border border-[#1b2947] rounded-lg p-3 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`w-2 h-2 rounded-full shrink-0 ${
-                          fromSkill?.status === 'Completed'
-                            ? 'bg-[#34d399]'
-                            : fromSkill?.status === 'In Progress'
-                            ? 'bg-[#00d2ff]'
-                            : 'bg-slate-600'
-                        }`}
-                      />
-
-                      <span className="text-xs font-semibold text-slate-200 truncate">
-                        {relationship.from}
-                      </span>
+                      <p className="text-[11px] text-slate-500 mt-1">
+                        {skill.category}
+                      </p>
                     </div>
-                  </div>
 
-                  {/* CONNECTION */}
-
-                  <div className="flex flex-col items-center min-w-[75px]">
-                    <span className="text-[9px] text-slate-500 mb-1 text-center">
-                      {relationship.label}
+                    <span
+                      className={`text-[10px] font-bold px-2 py-1 rounded-full border ${getStatusClasses(
+                        skill.status
+                      )}`}
+                    >
+                      {skill.status}
                     </span>
-
-                    <div className="flex items-center w-full">
-                      <div className="h-px flex-1 bg-gradient-to-r from-[#00d2ff]/40 to-[#34d399]/60" />
-
-                      <svg
-                        className="w-3.5 h-3.5 text-[#34d399] shrink-0"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10.293 15.707a1 1 0 010-1.414L13.586 11H4a1 1 0 110-2h9.586l-3.293-3.293a1 1 0 011.414-1.414l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
                   </div>
 
-                  {/* TO */}
+                  <div className="mt-4">
+                    <div className="flex justify-between mb-2">
+                      <span className="text-[10px] text-slate-500">
+                        Competency
+                      </span>
 
-                  <div className="bg-[#0d1526] border border-[#1b2947] rounded-lg p-3 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`w-2 h-2 rounded-full shrink-0 ${
-                          toSkill?.status === 'Completed'
-                            ? 'bg-[#34d399]'
-                            : toSkill?.status === 'In Progress'
-                            ? 'bg-[#00d2ff]'
-                            : 'bg-slate-600'
-                        }`}
-                      />
-
-                      <span className="text-xs font-semibold text-slate-200 truncate">
-                        {relationship.to}
+                      <span className="text-xs font-bold text-slate-300">
+                        {skill.progress}%
                       </span>
                     </div>
+
+                    <div className="h-1.5 bg-[#17253d] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#00d2ff] to-[#34d399] rounded-full"
+                        style={{
+                          width: `${skill.progress}%`,
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
+
+                  {isSelected && (
+                    <div className="mt-4 pt-4 border-t border-[#1b2947]">
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        {skill.description}
+                      </p>
+                    </div>
+                  )}
+                </button>
               );
             })}
           </div>
         </div>
+
+        {/* Skill Relationships */}
+
+        <div className="mt-8">
+          <h3 className="text-sm font-bold text-white">
+            Skill Relationships
+          </h3>
+
+          <p className="text-[11px] text-slate-500 mt-1 mb-4">
+            See how your knowledge areas build on and
+            support one another.
+          </p>
+
+          <div className="bg-[#09111f] border border-[#1b2947] rounded-xl p-5">
+            <div className="space-y-3">
+              {relationships.map(
+                (relationship, index) => (
+                  <div
+                    key={index}
+                    className="grid grid-cols-[1fr_auto_1fr] items-center gap-3"
+                  >
+                    <div className="bg-[#0d1526] border border-[#1b2947] rounded-lg p-3">
+                      <span className="text-xs font-semibold text-slate-200">
+                        {relationship.from}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col items-center min-w-[70px]">
+                      <span className="text-[9px] text-slate-500 mb-1">
+                        {relationship.label}
+                      </span>
+
+                      <span className="text-[#34d399]">
+                        →
+                      </span>
+                    </div>
+
+                    <div className="bg-[#0d1526] border border-[#1b2947] rounded-lg p-3">
+                      <span className="text-xs font-semibold text-slate-200">
+                        {relationship.to}
+                      </span>
+                    </div>
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Recommended Next Step */}
+
+        <div className="mt-6 bg-gradient-to-r from-[#00d2ff]/5 to-[#34d399]/5 border border-[#00d2ff]/20 rounded-xl p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <p className="text-[10px] uppercase tracking-wider font-bold text-[#00d2ff]">
+                Recommended Next Step
+              </p>
+
+              <h3 className="text-sm font-bold text-white mt-1">
+                Strengthen Data Structures & Algorithms
+              </h3>
+
+              <p className="text-xs text-slate-400 mt-1">
+                Improving this competency will strengthen
+                your foundation for Machine Learning and
+                advanced software engineering.
+              </p>
+            </div>
+
+            <span className="px-3 py-1.5 rounded-lg bg-[#00d2ff]/10 border border-[#00d2ff]/30 text-xs font-bold text-[#00d2ff] shrink-0">
+              68% complete
+            </span>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+
+  // ============================================================
+  // QUIZ PANEL
+  // ============================================================
+
+  const currentQuizQuestion =
+    demoQuestions[currentQuestion];
+
+  const quizPanel = (
+    <section className="bg-[#0d1526] border border-[#1b2947] rounded-xl overflow-hidden min-h-[600px]">
+      {/* Quiz Header */}
+
+      <div className="flex items-center justify-between gap-4 p-5 border-b border-[#1b2947]">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#00d2ff]" />
+
+            <h2 className="text-lg font-bold text-white">
+              Diagnostic Knowledge Quiz
+            </h2>
+          </div>
+
+          <p className="text-xs text-slate-400 mt-1">
+            Based on your uploaded coursework.
+          </p>
+        </div>
+
+        {/* <> Toggle */}
+
+        <button
+          type="button"
+          onClick={() =>
+            setQuizExpanded((previous) => !previous)
+          }
+          title={
+            quizExpanded
+              ? 'Return to split screen'
+              : 'Full screen quiz'
+          }
+          className="h-10 min-w-12 px-3 flex items-center justify-center rounded-lg border border-[#00d2ff]/40 text-[#00d2ff] hover:bg-[#00d2ff]/10 transition-colors font-bold text-sm"
+        >
+          &lt;&gt;
+        </button>
       </div>
+
+      {/* Loading appears HERE on the right */}
+
+      {quizLoading ? (
+        <div className="min-h-[500px] flex flex-col items-center justify-center p-8 text-center">
+          <div className="w-12 h-12 rounded-full border-4 border-[#1b2947] border-t-[#00d2ff] animate-spin" />
+
+          <h3 className="text-base font-bold text-white mt-6">
+            Generating your quiz...
+          </h3>
+
+          <p className="text-xs text-slate-400 mt-2 max-w-xs">
+            Analyzing your uploaded coursework and
+            preparing diagnostic questions.
+          </p>
+
+          <div className="mt-6 w-full max-w-xs h-1.5 rounded-full bg-[#17253d] overflow-hidden">
+            <div className="h-full w-2/3 bg-gradient-to-r from-[#00d2ff] to-[#34d399] rounded-full animate-pulse" />
+          </div>
+        </div>
+      ) : quizSubmitted ? (
+        /* Results */
+
+        <div className="min-h-[500px] flex flex-col items-center justify-center p-8 text-center">
+          <div className="w-24 h-24 rounded-full bg-[#00d2ff]/10 border border-[#00d2ff]/30 flex items-center justify-center">
+            <span className="text-2xl font-extrabold text-[#00d2ff]">
+              {Math.round(
+                (score / demoQuestions.length) * 100
+              )}
+              %
+            </span>
+          </div>
+
+          <h3 className="text-xl font-bold text-white mt-5">
+            Quiz Complete
+          </h3>
+
+          <p className="text-sm text-slate-400 mt-2">
+            You answered {score} of{' '}
+            {demoQuestions.length} questions correctly.
+          </p>
+
+          <div className="grid grid-cols-2 gap-3 w-full max-w-sm mt-6">
+            <div className="bg-[#09111f] border border-[#1b2947] rounded-xl p-4">
+              <p className="text-2xl font-bold text-[#34d399]">
+                {score}
+              </p>
+
+              <p className="text-[10px] text-slate-500 mt-1">
+                Correct
+              </p>
+            </div>
+
+            <div className="bg-[#09111f] border border-[#1b2947] rounded-xl p-4">
+              <p className="text-2xl font-bold text-slate-300">
+                {demoQuestions.length - score}
+              </p>
+
+              <p className="text-[10px] text-slate-500 mt-1">
+                To Review
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setCurrentQuestion(0);
+              setAnswers({});
+              setQuizSubmitted(false);
+            }}
+            className="mt-6 px-5 py-2.5 rounded-lg bg-[#00d2ff] hover:bg-[#00bfe6] text-[#070d1a] text-xs font-bold transition-colors"
+          >
+            Retake Quiz
+          </button>
+        </div>
+      ) : (
+        /* Quiz */
+
+        <div className="p-5 sm:p-7">
+          {/* Progress */}
+
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-slate-400">
+              Question {currentQuestion + 1} of{' '}
+              {demoQuestions.length}
+            </span>
+
+            <span className="text-xs font-bold text-[#00d2ff]">
+              {Math.round(
+                ((currentQuestion + 1) /
+                  demoQuestions.length) *
+                  100
+              )}
+              %
+            </span>
+          </div>
+
+          <div className="mt-3 h-1.5 bg-[#17253d] rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-[#00d2ff] to-[#34d399] rounded-full transition-all duration-300"
+              style={{
+                width: `${
+                  ((currentQuestion + 1) /
+                    demoQuestions.length) *
+                  100
+                }%`,
+              }}
+            />
+          </div>
+
+          {/* Question */}
+
+          <h3 className="text-lg font-semibold text-white leading-relaxed mt-7">
+            {currentQuizQuestion.question}
+          </h3>
+
+          {/* Answers */}
+
+          <div className="space-y-3 mt-6">
+            {currentQuizQuestion.options.map(
+              (option, optionIndex) => {
+                const selected =
+                  answers[currentQuestion] ===
+                  optionIndex;
+
+                return (
+                  <button
+                    type="button"
+                    key={optionIndex}
+                    onClick={() =>
+                      selectAnswer(optionIndex)
+                    }
+                    className={`w-full flex items-center gap-3 text-left p-4 rounded-xl border transition-all ${
+                      selected
+                        ? 'border-[#00d2ff] bg-[#00d2ff]/10'
+                        : 'border-[#1b2947] bg-[#09111f] hover:border-[#00d2ff]/40'
+                    }`}
+                  >
+                    <span
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold ${
+                        selected
+                          ? 'bg-[#00d2ff] text-[#070d1a]'
+                          : 'bg-[#17253d] text-slate-400'
+                      }`}
+                    >
+                      {String.fromCharCode(
+                        65 + optionIndex
+                      )}
+                    </span>
+
+                    <span
+                      className={`text-sm ${
+                        selected
+                          ? 'text-white'
+                          : 'text-slate-300'
+                      }`}
+                    >
+                      {option}
+                    </span>
+                  </button>
+                );
+              }
+            )}
+          </div>
+
+          {/* Question navigation numbers */}
+
+          <div className="mt-7 pt-5 border-t border-[#1b2947]">
+            <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-3">
+              Questions
+            </p>
+
+            <div className="flex flex-wrap gap-2">
+              {demoQuestions.map((_, index) => {
+                const active =
+                  currentQuestion === index;
+
+                const answered =
+                  answers[index] !== undefined;
+
+                return (
+                  <button
+                    type="button"
+                    key={index}
+                    onClick={() =>
+                      setCurrentQuestion(index)
+                    }
+                    className={`w-8 h-8 rounded-lg text-[10px] font-bold border transition-all ${
+                      active
+                        ? 'bg-[#00d2ff] border-[#00d2ff] text-[#070d1a]'
+                        : answered
+                        ? 'bg-[#10b981]/10 border-[#10b981]/30 text-[#34d399]'
+                        : 'bg-[#09111f] border-[#1b2947] text-slate-500'
+                    }`}
+                  >
+                    {index + 1}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Previous / Next */}
+
+          <div className="flex items-center justify-between gap-3 mt-7">
+            <button
+              type="button"
+              disabled={currentQuestion === 0}
+              onClick={() =>
+                setCurrentQuestion((previous) =>
+                  Math.max(previous - 1, 0)
+                )
+              }
+              className="px-4 py-2.5 rounded-lg border border-[#263858] text-xs font-bold text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:border-[#00d2ff]/50 transition-colors"
+            >
+              Previous
+            </button>
+
+            {currentQuestion <
+            demoQuestions.length - 1 ? (
+              <button
+                type="button"
+                disabled={
+                  answers[currentQuestion] ===
+                  undefined
+                }
+                onClick={() =>
+                  setCurrentQuestion(
+                    (previous) => previous + 1
+                  )
+                }
+                className="px-5 py-2.5 rounded-lg bg-[#00d2ff] hover:bg-[#00bfe6] disabled:opacity-30 disabled:cursor-not-allowed text-[#070d1a] text-xs font-bold transition-colors"
+              >
+                Next
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={
+                  answers[currentQuestion] ===
+                  undefined
+                }
+                onClick={() =>
+                  setQuizSubmitted(true)
+                }
+                className="px-5 py-2.5 rounded-lg bg-[#34d399] hover:bg-[#2fc28c] disabled:opacity-30 disabled:cursor-not-allowed text-[#070d1a] text-xs font-bold transition-colors"
+              >
+                Submit Quiz
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </section>
+  );
+
+  // ============================================================
+  // PAGE LAYOUT
+  // ============================================================
+
+  if (!quizOpen) {
+    return knowledgeMapContent;
+  }
+
+  // Full-width quiz
+  if (quizExpanded) {
+    return (
+      <div className="w-full transition-all duration-300">
+        {quizPanel}
+      </div>
+    );
+  }
+
+  // Split screen
+  return (
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start transition-all duration-300">
+      {/* LEFT */}
+      <div className="min-w-0">
+        {knowledgeMapContent}
+      </div>
+
+      {/* RIGHT */}
+      <div className="min-w-0 xl:sticky xl:top-6">
+        {quizPanel}
+      </div>
+    </div>
   );
 }

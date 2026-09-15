@@ -36,18 +36,13 @@ const GOOGLE_AUTH_ERROR_MESSAGES: Record<string, string> = {
 
 export default function Home() {
   const [tab, setTab] = useState<Tab>('Workspace');
-  const [currentUser, setCurrentUser] = useState<StudentUser | null>(null);
-  const [isInitializing, setIsInitializing] = useState(true);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
-  const [isCopilotHovered, setIsCopilotHovered] = useState(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [authBannerError, setAuthBannerError] = useState<string | null>(null);
 
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // Restore saved student session
+  // ================================================================
+  // RESTORE SAVED STUDENT SESSION
+  // ================================================================
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -60,127 +55,173 @@ export default function Home() {
         }
       }
     } catch (e) {
-      console.warn('Could not restore student session:', e);
+      console.warn(
+        'Could not restore student session:',
+        e
+      );
     } finally {
       setIsInitializing(false);
     }
   }, []);
 
-  // Close user menu when clicking outside
+  // ================================================================
+  // CLOSE USER MENU WHEN CLICKING OUTSIDE
+  // ================================================================
+
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (
+      event: MouseEvent
+    ) => {
       if (
         userMenuRef.current &&
-        !userMenuRef.current.contains(event.target as Node)
+        !userMenuRef.current.contains(
+          event.target as Node
+        )
       ) {
         setIsUserMenuOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener(
+      'mousedown',
+      handleClickOutside
+    );
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener(
+        'mousedown',
+        handleClickOutside
+      );
     };
   }, []);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const authError = params.get('authError');
+  // ================================================================
+  // AUTH SUCCESS
+  // ================================================================
 
-    if (!authError) {
-      return;
-    }
-
-    const message = GOOGLE_AUTH_ERROR_MESSAGES[authError];
-
-    if (message) {
-      setAuthBannerError(message);
-
-      const nextUrl = new URL(window.location.href);
-      nextUrl.searchParams.delete('authError');
-      window.history.replaceState({}, '', nextUrl.toString());
-    }
-  }, []);
-
-  const handleAuthSuccess = (user: StudentUser) => {
+  const handleAuthSuccess = (
+    user: StudentUser
+  ) => {
     setCurrentUser(user);
 
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(user)
+      );
     } catch (e) {
-      console.warn('Failed to save session locally', e);
+      console.warn(
+        'Failed to save session locally',
+        e
+      );
     }
 
     setTab('Workspace');
   };
 
+  // ================================================================
+  // QUICK DEMO
+  // ================================================================
+
   const handleQuickDemo = async () => {
     try {
-      const res = await fetch('/api/auth/student', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'demo',
-        }),
-      });
+      const res = await fetch(
+        '/api/auth/student',
+        {
+          method: 'POST',
+
+          headers: {
+            'Content-Type':
+              'application/json',
+          },
+
+          body: JSON.stringify({
+            action: 'demo',
+          }),
+        }
+      );
 
       const data = await res.json();
 
       if (data.success && data.user) {
         handleAuthSuccess(data.user);
       } else {
-        throw new Error('Fallback needed');
+        throw new Error(
+          'Fallback needed'
+        );
       }
     } catch {
       handleAuthSuccess({
         id: 'demo-student-id',
         name: 'Sokha Chea (Alex)',
-        email: 'sokha.demo@camtech.edu.kh',
+        email:
+          'sokha.demo@camtech.edu.kh',
         role: 'STUDENT',
-        educationLevel: 'UNIVERSITY_YEAR_3',
+        educationLevel:
+          'UNIVERSITY_YEAR_3',
         institution: 'CamTech / ITC',
       });
     }
   };
 
+  // ================================================================
+  // LOG OUT
+  // ================================================================
+
   const handleLogOut = () => {
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(
+        STORAGE_KEY
+      );
     } catch (e) {
       console.warn(e);
     }
 
     setCurrentUser(null);
     setIsUserMenuOpen(false);
+    setIsCopilotOpen(false);
     setTab('Workspace');
   };
 
-  // Get initials for user avatar
-  const getInitials = (name?: string) => {
+  // ================================================================
+  // GET USER INITIALS
+  // ================================================================
+
+  const getInitials = (
+    name?: string
+  ) => {
     if (!name) {
       return 'ST';
     }
 
-    const parts = name.trim().split(' ');
+    const parts = name
+      .trim()
+      .split(' ');
 
     if (parts.length === 1) {
-      return parts[0].substring(0, 2).toUpperCase();
+      return parts[0]
+        .substring(0, 2)
+        .toUpperCase();
     }
 
     return (
-      parts[0][0] + parts[parts.length - 1][0]
+      parts[0][0] +
+      parts[parts.length - 1][0]
     ).toUpperCase();
   };
 
-  // Initial loading screen
+  // ================================================================
+  // INITIAL LOADING SCREEN
+  // ================================================================
+
   if (isInitializing) {
     return (
       <main className="min-h-screen bg-[#080d1a] flex flex-col items-center justify-center text-slate-400">
         <div className="animate-pulse mb-4">
-          <UrFutureLogo variant="icon-only" size="lg" />
+          <UrFutureLogo
+            variant="icon-only"
+            size="lg"
+          />
         </div>
 
         <p className="text-xs font-semibold tracking-wider text-slate-400 uppercase">
@@ -190,7 +231,10 @@ export default function Home() {
     );
   }
 
-  // Landing page when user is not logged in
+  // ================================================================
+  // LANDING PAGE
+  // ================================================================
+
   if (!currentUser) {
     return (
       <>
@@ -212,46 +256,63 @@ export default function Home() {
             setAuthMode(mode);
             setIsAuthModalOpen(true);
           }}
-          onQuickDemo={handleQuickDemo}
+          onQuickDemo={
+            handleQuickDemo
+          }
         />
 
         <StudentAuthModal
           isOpen={isAuthModalOpen}
           initialMode={authMode}
-          onClose={() => setIsAuthModalOpen(false)}
-          onSuccess={handleAuthSuccess}
+          onClose={() =>
+            setIsAuthModalOpen(false)
+          }
+          onSuccess={
+            handleAuthSuccess
+          }
         />
       </>
     );
   }
 
-  // Logged-in dashboard
+  // ================================================================
+  // LOGGED-IN DASHBOARD
+  // ================================================================
+
   return (
     <div className="min-h-screen bg-[#080d1a] text-[#f1f5f9] flex flex-col">
-      {/* ================================================================ */}
+
+      {/* ============================================================ */}
       {/* TOP NAVIGATION */}
-      {/* ================================================================ */}
+      {/* ============================================================ */}
 
       <header className="sticky top-0 z-40 bg-[#080d1a]/90 backdrop-blur-md border-b border-[#142038] px-4 sm:px-8 py-3.5 flex items-center justify-between">
+
         {/* Logo */}
 
         <div
           className="cursor-pointer"
-          onClick={() => setTab('Workspace')}
+          onClick={() =>
+            setTab('Workspace')
+          }
         >
           <UrFutureLogo variant="navbar" />
         </div>
 
-        {/* Desktop navigation */}
+        {/* Desktop Navigation */}
 
         <nav className="hidden md:flex items-center gap-1 bg-[#0c1424] border border-[#172640] p-1 rounded-xl">
           {TABS.map((t) => {
-            const isActive = tab === t;
+            const isActive =
+              tab === t;
 
             return (
               <button
                 key={t}
-                onClick={() => setTab(t)}
+                type="button"
+                onClick={() =>
+                  setTab(t)
+                }
                 className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   isActive
                     ? 'bg-[#14233e] text-[#00d2ff] shadow-sm border border-[#21385f]'
@@ -264,12 +325,14 @@ export default function Home() {
           })}
         </nav>
 
-        {/* Right controls */}
+        {/* Right Controls */}
 
         <div className="flex items-center gap-3">
+
           {/* Notifications */}
 
           <button
+            type="button"
             title="Notifications"
             className="w-9 h-9 rounded-full bg-[#0c1628] hover:bg-[#13223d] border border-[#1b2b4c] text-slate-300 hover:text-white flex items-center justify-center transition-colors relative"
           >
@@ -290,26 +353,43 @@ export default function Home() {
             <span className="w-2 h-2 rounded-full bg-[#00d2ff] absolute top-2 right-2 ring-2 ring-[#080d1a]" />
           </button>
 
-          {/* User profile */}
+          {/* ======================================================== */}
+          {/* USER PROFILE */}
+          {/* ======================================================== */}
 
           <div
             className="relative"
             ref={userMenuRef}
           >
             <button
+              type="button"
               onClick={() =>
-                setIsUserMenuOpen(!isUserMenuOpen)
+                setIsUserMenuOpen(
+                  !isUserMenuOpen
+                )
               }
               title={`${currentUser.name} (${currentUser.email})`}
               className="flex items-center gap-2 p-1 rounded-full hover:bg-[#121e35] transition-colors"
             >
+              {/* Avatar */}
+
               <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#10b981] to-[#00d2ff] text-[#080d1a] font-extrabold text-xs flex items-center justify-center shadow-md shadow-[#10b981]/25 select-none hover:scale-105 transition-transform">
-                {getInitials(currentUser.name)}
+                {getInitials(
+                  currentUser.name
+                )}
               </div>
 
+              {/* Name */}
+
               <span className="hidden sm:inline-block text-xs font-semibold text-slate-300 max-w-[120px] truncate">
-                {currentUser.name.split(' ')[0]}
+                {
+                  currentUser.name.split(
+                    ' '
+                  )[0]
+                }
               </span>
+
+              {/* Dropdown Arrow */}
 
               <svg
                 className="w-3.5 h-3.5 text-slate-400 hidden sm:block"
@@ -326,60 +406,59 @@ export default function Home() {
               </svg>
             </button>
 
-            {/* User dropdown */}
+            {/* ====================================================== */}
+            {/* USER DROPDOWN */}
+            {/* ====================================================== */}
 
             {isUserMenuOpen && (
-              <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-[#0c1424] border border-[#1d2d4c] shadow-2xl shadow-black/50 py-2 z-50 animate-fadeIn">
-                <div className="px-4 py-3 border-b border-[#172540]">
-                  <p className="text-xs font-bold text-white truncate">
+              <div className="absolute right-0 mt-3 w-[340px] overflow-hidden rounded-2xl border border-[#203454] bg-[#0d1627] shadow-2xl shadow-black/50 z-50 animate-fadeIn">
+
+                {/* User Information */}
+
+                <div className="px-6 py-5 border-b border-[#203454]">
+                  <p className="text-lg font-bold text-white truncate">
                     {currentUser.name}
                   </p>
 
-                  <p className="text-[11px] text-slate-400 truncate">
+                  <p className="mt-1 text-sm text-slate-400 truncate">
                     {currentUser.email}
                   </p>
 
-                  <div className="mt-2 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-[#10b981]" />
+                  <div className="mt-4 flex items-center gap-3">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#10b981] shrink-0" />
 
-                    <span className="text-[10px] font-semibold text-[#00d2ff] truncate">
+                    <span className="text-sm font-medium text-slate-200 truncate">
                       {currentUser.institution ||
                         'Cambodia Student'}
                     </span>
                   </div>
                 </div>
 
-                <div className="py-1">
-                  <button
-                    onClick={() => {
-                      setTab('Workspace');
-                      setIsUserMenuOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:text-white hover:bg-[#14233e] flex items-center gap-2"
-                  >
-                    <span>🏠</span>
-                    Workspace Dashboard
-                  </button>
+                {/* Navigation Options */}
+
+                <div className="p-3">
+
+                  {/* Workspace Dashboard */}
 
                   <button
+                    type="button"
                     onClick={() => {
-                      handleQuickDemo();
-                      setIsUserMenuOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-xs text-[#00d2ff] hover:bg-[#14233e] flex items-center gap-2"
-                  >
-                    <span>⚡</span>
-                    Switch to Seeded Demo
-                  </button>
-                </div>
+                      setTab(
+                        'Workspace'
+                      );
 
-                <div className="border-t border-[#172540] pt-1">
-                  <button
-                    onClick={handleLogOut}
-                    className="w-full text-left px-4 py-2 text-xs text-red-400 hover:text-red-300 hover:bg-red-950/40 flex items-center gap-2 transition-colors"
+                      setIsUserMenuOpen(
+                        false
+                      );
+                    }}
+                    className="group w-full flex items-center justify-between rounded-xl px-4 py-3.5 text-left text-sm font-medium text-slate-200 hover:text-white hover:bg-[#14233e] transition-all"
                   >
+                    <span>
+                      Workspace Dashboard
+                    </span>
+
                     <svg
-                      className="w-3.5 h-3.5 text-red-400"
+                      className="w-4 h-4 text-slate-500 group-hover:text-slate-300 transition-colors"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -388,11 +467,56 @@ export default function Home() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                        d="M9 5l7 7-7 7"
                       />
                     </svg>
+                  </button>
 
-                    Sign Out &amp; Return to Home
+                  {/* Switch Demo */}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleQuickDemo();
+
+                      setIsUserMenuOpen(
+                        false
+                      );
+                    }}
+                    className="group mt-1 w-full flex items-center justify-between rounded-xl px-4 py-3.5 text-left text-sm font-medium text-slate-200 hover:text-white hover:bg-[#14233e] transition-all"
+                  >
+                    <span>
+                      Switch to Seeded Demo
+                    </span>
+
+                    <svg
+                      className="w-4 h-4 text-slate-500 group-hover:text-slate-300 transition-colors"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Sign Out */}
+
+                <div className="border-t border-[#203454] p-3">
+                  <button
+                    type="button"
+                    onClick={
+                      handleLogOut
+                    }
+                    className="w-full flex items-center rounded-xl px-4 py-3.5 text-left text-sm font-medium text-[#ff6b72] hover:bg-red-500/10 hover:text-[#ff7d83] transition-all"
+                  >
+                    Sign Out &amp;
+                    Return to Home
                   </button>
                 </div>
               </div>
@@ -401,15 +525,18 @@ export default function Home() {
         </div>
       </header>
 
-      {/* ================================================================ */}
+      {/* ============================================================ */}
       {/* MOBILE NAVIGATION */}
-      {/* ================================================================ */}
+      {/* ============================================================ */}
 
       <div className="md:hidden flex overflow-x-auto px-4 py-2 gap-1.5 border-b border-[#142038] bg-[#0c1424]">
         {TABS.map((t) => (
           <button
             key={t}
-            onClick={() => setTab(t)}
+            type="button"
+            onClick={() =>
+              setTab(t)
+            }
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
               tab === t
                 ? 'bg-[#14233e] text-[#00d2ff] border border-[#21385f]'
@@ -421,122 +548,175 @@ export default function Home() {
         ))}
       </div>
 
-      {/* ================================================================ */}
+      {/* ============================================================ */}
       {/* MAIN CONTENT */}
-      {/* ================================================================ */}
+      {/* ============================================================ */}
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8">
+
         {/* Workspace */}
 
         {tab === 'Workspace' && (
           <DashboardWorkspace
-            userId={currentUser.id}
-            studentName={currentUser.name}
-            institution={currentUser.institution}
-            onNavigateTab={setTab}
+            userId={
+              currentUser.id
+            }
+            studentName={
+              currentUser.name
+            }
+            institution={
+              currentUser.institution
+            }
+            onNavigateTab={
+              setTab
+            }
+            onOpenCopilot={() =>
+              setIsCopilotOpen(
+                true
+              )
+            }
           />
         )}
 
-        {/* Knowledge Map */}
+        {/* ======================================================== */}
+        {/* KNOWLEDGE MAP */}
+        {/* ======================================================== */}
 
-        {tab === 'Knowledge map' && (
-          <div className="flex flex-col gap-6">
-            <KnowledgeMapPanel
-              userId={currentUser.id}
-            />
-          </div>
+        {tab ===
+          'Knowledge map' && (
+          <KnowledgeMapPanel
+            userId={
+              currentUser.id
+            }
+          />
         )}
 
-        {/* Career Paths */}
+        {/* ======================================================== */}
+        {/* CAREER PATHS */}
+        {/* ======================================================== */}
 
-        {tab === 'Career paths' && (
+        {tab ===
+          'Career paths' && (
           <CareerFitPanel
-            userId={currentUser.id}
+            userId={
+              currentUser.id
+            }
           />
         )}
 
-        {/* Job Fit */}
+        {/* ======================================================== */}
+        {/* JOB FIT */}
+        {/* ======================================================== */}
 
         {tab === 'Job fit' && (
           <JobFitPanel
-            userId={currentUser.id}
+            userId={
+              currentUser.id
+            }
           />
         )}
       </main>
 
-      {/* Shared Copilot launcher remains visible while dashboard tabs change. */}
-      <div className="fixed bottom-8 right-8 z-50">
-        <div
-          className={`absolute bottom-full right-0 mb-6 transition-all duration-300 ${
-            isCopilotHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
-          }`}
-        >
-          <div className="relative">
-            <div className="bg-white text-dark-bg px-8 py-4 rounded-[2rem] shadow-xl shadow-black/20 min-w-[220px]">
-              <div className="text-center leading-tight">
-                <div className="text-sm font-bold">Hello! ជំរាបសួរ!</div>
-                <div className="text-sm font-bold mt-1">Need help?</div>
-              </div>
-            </div>
-            <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2">
-              <svg width="24" height="16" viewBox="0 0 24 16" fill="none" aria-hidden="true">
-                <path d="M2 0C2 0 8 14 12 14C16 14 22 0 22 0" fill="white" stroke="white" strokeWidth="1" strokeLinecap="round" />
-              </svg>
-            </div>
-          </div>
-        </div>
+      {/* ============================================================ */}
+      {/* GLOBAL AI ASSISTANT BUTTON */}
+      {/* ============================================================ */}
 
-        <button
-          type="button"
-          onClick={() => setIsCopilotOpen(true)}
-          onMouseEnter={() => setIsCopilotHovered(true)}
-          onMouseLeave={() => setIsCopilotHovered(false)}
-          aria-label="Open UrFuture Copilot"
-          className="relative group animate-scale-in"
+      <button
+        type="button"
+        onClick={() =>
+          setIsCopilotOpen(true)
+        }
+        title="Open UrFuture Assistant"
+        aria-label="Open UrFuture Assistant"
+        className="
+          fixed
+          bottom-6
+          right-6
+          z-40
+          w-16
+          h-16
+          rounded-full
+          flex
+          items-center
+          justify-center
+          bg-[#00c9f5]
+          border-[10px]
+          border-[#0d3045]
+          shadow-[0_0_30px_rgba(0,210,255,0.35)]
+          hover:scale-105
+          hover:bg-[#12d4ff]
+          transition-all
+          duration-200
+        "
+      >
+        <svg
+          className="w-7 h-7 text-white"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         >
-          <div className="relative w-20 h-20 animate-float">
-            <div className="absolute inset-0 bg-brand-cyan/30 rounded-3xl blur-xl animate-pulse" />
-            <svg viewBox="0 0 80 80" className="w-full h-full drop-shadow-2xl animate-pulse-glow transition-transform group-hover:scale-110" aria-hidden="true">
-              <defs>
-                <linearGradient id="robotGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#06b6d4" />
-                  <stop offset="100%" stopColor="#0891b2" />
-                </linearGradient>
-              </defs>
-              <rect x="10" y="15" width="60" height="50" rx="12" fill="url(#robotGradient)" />
-              <line x1="40" y1="15" x2="40" y2="5" stroke="#06b6d4" strokeWidth="3" strokeLinecap="round" />
-              <circle cx="40" cy="5" r="3" fill="#10b981" className="animate-pulse" />
-              <g className="animate-blink">
-                <ellipse cx="28" cy="35" rx="8" ry="10" fill="#1e293b" />
-                <circle cx="28" cy="35" r="5" fill="#10b981" />
-                <circle cx="28" cy="35" r="2" fill="#ffffff" />
-                <ellipse cx="52" cy="35" rx="8" ry="10" fill="#1e293b" />
-                <circle cx="52" cy="35" r="5" fill="#10b981" />
-                <circle cx="52" cy="35" r="2" fill="#ffffff" />
-              </g>
-              <rect x="30" y="52" width="20" height="4" rx="2" fill="#1e293b" />
-              <rect x="5" y="25" width="5" height="30" rx="2" fill="#0891b2" />
-              <rect x="70" y="25" width="5" height="30" rx="2" fill="#0891b2" />
-            </svg>
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-brand-emerald rounded-full animate-ping" style={{ animationDuration: '3s' }} />
-          </div>
-        </button>
-      </div>
+          <rect
+            x="5"
+            y="8"
+            width="14"
+            height="10"
+            rx="3"
+          />
 
-      {/* ================================================================ */}
+          <path d="M12 4v4" />
+          <path d="M9 4h6" />
+
+          <circle
+            cx="9"
+            cy="13"
+            r="1"
+            fill="currentColor"
+          />
+
+          <circle
+            cx="15"
+            cy="13"
+            r="1"
+            fill="currentColor"
+          />
+
+          <path d="M9 16h6" />
+        </svg>
+      </button>
+
+      {/* ============================================================ */}
       {/* CHATBOT MODAL */}
-      {/* ================================================================ */}
+      {/* ============================================================ */}
 
       {isCopilotOpen && (
         <ChatPanel
-          userId={currentUser.id}
+          userId={
+            currentUser.id
+          }
           isModal={true}
           onClose={() =>
-            setIsCopilotOpen(false)
+            setIsCopilotOpen(
+              false
+            )
           }
         />
       )}
 
+      {/* ============================================================ */}
+      {/* FOOTER */}
+      {/* ============================================================ */}
+
+      <footer className="mt-auto border-t border-[#142038] py-6 px-4 text-center text-xs text-slate-500">
+        <p>
+          UrFuture — Learn • Plan •
+          Achieve. Decision support
+          &amp; grounded career
+          pathways for students.
+        </p>
+      </footer>
     </div>
   );
 }
