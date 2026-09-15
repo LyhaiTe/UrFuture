@@ -203,7 +203,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
       {/* JOB DESCRIPTION INPUT */}
       {/* ================================================= */}
 
-      <section className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-6">
+      <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
 
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
 
@@ -211,12 +211,12 @@ export default function JobFitPanel({ userId }: { userId: string }) {
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#00d2ff]" />
 
-              <h2 className="text-lg font-bold text-white">
+              <h2 className="text-lg font-semibold text-slate-900">
                 Job Description Fit-Check & Gap Assessment
               </h2>
             </div>
 
-            <p className="text-xs text-slate-400 mt-2">
+            <p className="text-xs text-slate-600 mt-2">
               Compare a job posting against your verified knowledge map
               and identify your strongest and missing skills.
             </p>
@@ -244,7 +244,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
                 'We are looking for a Junior Software Engineer named NUT SANNARA with knowledge of programming fundamentals, data structures, algorithms, SQL, database design, Git, automated testing, cloud deployment, and software development best practices.'
               )
             }
-            className="px-3 py-1.5 rounded-lg border border-[#1b2947] bg-[#09111f] text-xs text-slate-300 hover:border-[#00d2ff]/50 hover:text-[#00d2ff] transition"
+            className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 hover:border-cyan-500 hover:text-cyan-700 transition"
           >
             Junior Software Engineer
           </button>
@@ -257,7 +257,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
                 'Seeking a Data and Business Analyst with skills in SQL, database systems, data analysis, dashboards, business intelligence, communication, reporting, Excel, and analytical problem solving.'
               )
             }
-            className="px-3 py-1.5 rounded-lg border border-[#1b2947] bg-[#09111f] text-xs text-slate-300 hover:border-[#00d2ff]/50 hover:text-[#00d2ff] transition"
+            className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 hover:border-cyan-500 hover:text-cyan-700 transition"
           >
             Data & Business Analyst
           </button>
@@ -288,13 +288,13 @@ export default function JobFitPanel({ userId }: { userId: string }) {
                 setStudyPlan([]);
                 setError(null);
               }}
-              className="w-full appearance-none bg-[#09111f] border border-[#1b2947] rounded-xl px-4 py-3 pr-10 text-sm text-white outline-none focus:border-[#00d2ff]/60 transition cursor-pointer"
+              className="w-full appearance-none bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 pr-10 text-sm text-slate-800 dark:text-slate-100 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:focus:ring-cyan-900/40 transition cursor-pointer"
             >
               {JOB_TITLES.map((title) => (
                 <option
                   key={title}
                   value={title}
-                  className="bg-[#0d1526] text-white"
+                  className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
                   disabled={title === 'Select a job title...'}
                 >
                   {title}
@@ -336,7 +336,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
                   setError(null);
                 }}
                 placeholder="e.g. Junior Robotics Engineer, Fintech Analyst"
-                className="mt-2 w-full bg-[#09111f] border border-[#00d2ff]/40 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none focus:border-[#00d2ff]/60 transition"
+                className="mt-2 w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:focus:ring-cyan-900/40 transition"
               />
             </div>
           )}
@@ -361,7 +361,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
             }}
             placeholder="Paste the job description or role requirements here..."
             rows={6}
-            className="mt-2 w-full resize-none bg-[#09111f] border border-[#1b2947] rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none focus:border-[#00d2ff]/60 transition"
+            className="mt-2 w-full resize-none bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:focus:ring-cyan-900/40 transition"
           />
 
         </div>
@@ -381,7 +381,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
               (showCustomInput && !customTitle.trim()) ||
               jobDescription.trim().length < 20
             }
-            className="rounded-xl bg-[#00d2ff] hover:bg-[#00bfe6] disabled:opacity-40 disabled:cursor-not-allowed text-[#080d1a] px-6 py-2.5 text-xs font-bold shadow-md shadow-[#00d2ff]/20 transition flex items-center justify-center gap-2"
+            className="rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-600 disabled:opacity-40 disabled:cursor-not-allowed text-white px-6 py-2.5 text-xs font-semibold shadow-md shadow-teal-600/20 transition flex items-center justify-center gap-2"
           >
 
             {busy && (

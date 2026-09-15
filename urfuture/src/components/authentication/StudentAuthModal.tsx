@@ -124,13 +124,13 @@ export default function StudentAuthModal({
         </div>
       )}
 
-      <div className="relative w-full max-w-md bg-dark-panel border border-dark-borderPanelHover rounded-2xl shadow-2xl shadow-brand-cyan/10 overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-md bg-dark-card border border-dark-border rounded-2xl shadow-2xl shadow-brand-cyan/10 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Centered Logo Header */}
-        <div className="flex items-center justify-center relative px-6 py-5 border-b border-dark-divider bg-dark-panelAlt/80">
+        <div className="flex items-center justify-center relative px-6 py-5 border-b border-dark-border bg-dark-surface/80">
           <UrFutureLogo variant="navbar" />
           <button
             onClick={onClose}
-            className="absolute right-4 top-4 w-8 h-8 rounded-lg bg-dark-borderSubtle hover:bg-dark-cardHover text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+            className="absolute right-4 top-4 w-8 h-8 rounded-lg bg-dark-surface text-slate-400 hover:text-brand-cyan hover:bg-brand-cyan/10 hover:border-brand-cyan/30 border border-transparent hover:shadow-sm transition-all duration-200"
             title="Close modal"
           >
             ✕
@@ -139,14 +139,14 @@ export default function StudentAuthModal({
 
         <div className="p-6 overflow-y-auto scrollbar-thin flex-1">
           {/* Mode Toggle */}
-          <div className="flex bg-dark-bg p-1 rounded-xl border border-dark-divider mb-6">
+          <div className="flex bg-dark-bg p-1 rounded-xl border border-dark-border mb-6">
             <button
               type="button"
               onClick={() => { setMode('login'); setError(null); }}
               className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${
                 mode === 'login'
-                  ? 'bg-dark-cardHover text-brand-cyan border border-dark-borderPanelHover shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-dark-cardHover text-brand-cyan border border-dark-borderLight shadow-sm'
+                  : 'text-slate-400 hover:text-brand-cyan hover:bg-brand-cyan/5'
               }`}
             >
               Sign In
@@ -156,8 +156,8 @@ export default function StudentAuthModal({
               onClick={() => { setMode('register'); setError(null); }}
               className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${
                 mode === 'register'
-                  ? 'bg-dark-cardHover text-brand-cyan border border-dark-borderPanelHover shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-dark-cardHover text-brand-cyan border border-dark-borderLight shadow-sm'
+                  : 'text-slate-400 hover:text-brand-cyan hover:bg-brand-cyan/5'
               }`}
             >
               Create Account
@@ -184,7 +184,7 @@ export default function StudentAuthModal({
                   placeholder="e.g. Sokha Chea"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-dark-panelAlt border border-dark-borderPanel text-white text-sm focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan/20 transition-all placeholder:text-slate-600"
+                  className="w-full px-4 py-2.5 rounded-xl bg-dark-surface border border-dark-border text-white text-sm focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan/20 transition-all placeholder:text-slate-600"
                   required={mode === 'register'}
                 />
               </div>
@@ -199,7 +199,7 @@ export default function StudentAuthModal({
                 placeholder="student@university.edu.kh"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-dark-panelAlt border border-dark-borderPanel text-white text-sm focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan/20 transition-all placeholder:text-slate-600"
+                className="w-full px-4 py-2.5 rounded-xl bg-dark-surface border border-dark-border text-white text-sm focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan/20 transition-all placeholder:text-slate-600"
                 required
               />
             </div>
@@ -214,10 +214,10 @@ export default function StudentAuthModal({
                     <select
                       value={institution}
                       onChange={(e) => setInstitution(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl bg-dark-panelAlt border border-dark-borderPanel text-white text-sm focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan/20 transition-all"
+                      className="w-full px-4 py-2.5 rounded-xl bg-dark-surface border border-dark-border text-white text-sm focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan/20 transition-all"
                     >
                       {INSTITUTIONS.map((inst) => (
-                        <option key={inst} value={inst} className="bg-dark-panel">
+                        <option key={inst} value={inst} className="bg-dark-surface">
                           {inst}
                         </option>
                       ))}
@@ -231,10 +231,10 @@ export default function StudentAuthModal({
                     <select
                       value={educationLevel}
                       onChange={(e) => setEducationLevel(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl bg-dark-panelAlt border border-dark-borderPanel text-white text-sm focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan/20 transition-all"
+                      className="w-full px-4 py-2.5 rounded-xl bg-dark-surface border border-dark-border text-white text-sm focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan/20 transition-all"
                     >
                       {EDUCATION_LEVELS.map((lvl) => (
-                        <option key={lvl.value} value={lvl.value} className="bg-dark-panel">
+                        <option key={lvl.value} value={lvl.value} className="bg-dark-surface">
                           {lvl.label}
                         </option>
                       ))}
@@ -249,10 +249,10 @@ export default function StudentAuthModal({
                   <select
                     value={academicTrack}
                     onChange={(e) => setAcademicTrack(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-dark-panelAlt border border-dark-borderPanel text-white text-sm focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan/20 transition-all"
+                    className="w-full px-4 py-2.5 rounded-xl bg-dark-surface border border-dark-border text-white text-sm focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan/20 transition-all"
                   >
                     {ACADEMIC_TRACKS.map((track) => (
-                      <option key={track.value} value={track.value} className="bg-dark-panel">
+                      <option key={track.value} value={track.value} className="bg-dark-surface">
                         {track.label}
                       </option>
                     ))}
@@ -277,7 +277,7 @@ export default function StudentAuthModal({
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-dark-panelAlt border border-dark-borderPanel text-white text-sm focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan/20 transition-all placeholder:text-slate-600"
+                className="w-full px-4 py-2.5 rounded-xl bg-dark-surface border border-dark-border text-white text-sm focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan/20 transition-all placeholder:text-slate-600"
               />
             </div>
 
@@ -290,7 +290,7 @@ export default function StudentAuthModal({
                   window.location.href = '/api/auth/student/google';
                 }}
                 disabled={isGoogleRedirecting || loading}
-                className="w-full py-3 px-4 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-semibold text-sm flex items-center justify-center gap-3 transition-all disabled:opacity-70 disabled:cursor-wait hover:scale-[1.01] active:scale-[0.99] shadow-sm border border-slate-200"
+                className="w-full py-3 px-4 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-semibold text-sm flex items-center justify-center gap-3 transition-all duration-200 disabled:opacity-70 disabled:cursor-wait hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:shadow-sm shadow-sm border border-slate-200 hover:border-slate-300"
               >
                 {isGoogleRedirecting ? (
                   <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -310,7 +310,7 @@ export default function StudentAuthModal({
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 rounded-xl bg-brand-cyan hover:bg-brand-cyanBright text-dark-bg font-extrabold text-sm shadow-lg shadow-brand-cyan/25 transition-all flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70 disabled:cursor-wait"
+              className="w-full py-3 px-4 rounded-xl bg-brand-cyan hover:bg-brand-cyanBright text-dark-bg font-extrabold text-sm shadow-lg shadow-brand-cyan/25 transition-all duration-200 flex items-center justify-center gap-2 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-brand-cyan/30 active:translate-y-0 active:shadow-lg disabled:opacity-70 disabled:cursor-wait"
             >
               {loading ? (
                 <span className="inline-block w-4 h-4 border-2 border-dark-bg border-t-transparent rounded-full animate-spin" />

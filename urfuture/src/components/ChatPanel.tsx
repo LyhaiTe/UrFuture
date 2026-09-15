@@ -29,7 +29,7 @@ function renderContent(text: string) {
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       return (
-        <strong key={i} className="font-bold text-white">
+        <strong key={i} className="font-bold text-cyan-600 dark:text-cyan-400">
           {part.slice(2, -2)}
         </strong>
       );
@@ -141,11 +141,11 @@ export default function ChatPanel({ userId, isModal = false, onClose }: ChatPane
   }
 
   const content = (
-    <div className="flex h-full flex-col bg-[#0a1120] border border-[#1b2947] rounded-2xl shadow-2xl shadow-black/40 overflow-hidden">
+    <div className="flex h-full flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl shadow-black/20 overflow-hidden">
       {/* ========================================================================= */}
       {/* HEADER */}
       {/* ========================================================================= */}
-      <div className="border-b border-[#1b2947] px-5 py-3.5 flex items-center justify-between bg-gradient-to-r from-[#0c1830] to-[#0a1426]">
+      <div className="chat-header border-b border-[#1b2947] px-5 py-3.5 flex items-center justify-between bg-gradient-to-r from-[#0c1830] to-[#0a1426]">
         <div className="flex items-center gap-3">
           {/* Robot icon matching the floating button */}
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#00d2ff] to-[#0099cc] flex items-center justify-center shadow-md shadow-[#00d2ff]/30">
@@ -166,7 +166,7 @@ export default function ChatPanel({ userId, isModal = false, onClose }: ChatPane
                 AI Advisor
               </span>
             </h3>
-            <p className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+            <p className="text-[11px] text-slate-300 flex items-center gap-1.5 mt-0.5">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10b981] opacity-75" />
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#10b981]" />
@@ -179,7 +179,7 @@ export default function ChatPanel({ userId, isModal = false, onClose }: ChatPane
         {isModal && onClose && (
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg bg-[#14223d] hover:bg-[#1e345e] text-slate-400 hover:text-white flex items-center justify-center transition-all hover:scale-105"
+            className="chat-close-button w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all hover:scale-105"
             aria-label="Close chat"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -202,7 +202,7 @@ export default function ChatPanel({ userId, isModal = false, onClose }: ChatPane
               className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                 m.role === 'user'
                   ? 'bg-gradient-to-r from-[#0284c7] to-[#0ea5e9] text-white font-medium shadow-md shadow-[#0284c7]/20 rounded-tr-sm'
-                  : 'bg-[#0f192e] border border-[#1b2b4d] text-slate-200 shadow-sm rounded-tl-sm'
+                  : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 shadow-sm rounded-tl-sm'
               }`}
             >
               {m.content ? (
@@ -239,8 +239,8 @@ export default function ChatPanel({ userId, isModal = false, onClose }: ChatPane
       {/* SUGGESTED PROMPTS */}
       {/* ========================================================================= */}
       {showSuggestions && messages.length <= 2 && (
-        <div className="px-5 py-3 border-t border-[#15233d] bg-[#09101e]/60">
-          <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">
+        <div className="px-5 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80">
+          <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-2">
             Try asking
           </span>
           <div className="flex flex-wrap gap-1.5">
@@ -249,7 +249,7 @@ export default function ChatPanel({ userId, isModal = false, onClose }: ChatPane
                 key={idx}
                 onClick={() => handleSend(p)}
                 disabled={streaming}
-                className="text-[11px] px-3 py-1.5 rounded-full bg-[#111f38] hover:bg-[#1a2e54] hover:border-[#00d2ff]/40 text-slate-300 hover:text-[#00d2ff] border border-[#1e335a] transition-all text-left disabled:opacity-50"
+                className="text-[11px] px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100 font-medium border border-slate-200 dark:border-slate-700 transition-all text-left disabled:opacity-50"
               >
                 {p}
               </button>
@@ -269,12 +269,12 @@ export default function ChatPanel({ userId, isModal = false, onClose }: ChatPane
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
             placeholder="Ask about careers, courses, GPA fit..."
             disabled={streaming}
-            className="flex-1 rounded-xl bg-[#0e172a] border border-[#1b2b4c] focus:border-[#00d2ff] focus:ring-1 focus:ring-[#00d2ff]/30 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition-all disabled:opacity-50"
+            className="flex-1 rounded-xl bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:focus:ring-cyan-900/40 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none transition-all disabled:opacity-50"
           />
           <button
             onClick={() => handleSend()}
             disabled={streaming || !input.trim()}
-            className="rounded-xl bg-gradient-to-r from-[#00d2ff] to-[#00bfe6] hover:from-[#00bfe6] hover:to-[#00a8cc] disabled:opacity-40 disabled:hover:from-[#00d2ff] disabled:hover:to-[#00bfe6] text-[#080d1a] px-4 py-2.5 text-sm font-bold shadow-md shadow-[#00d2ff]/20 transition-all flex items-center gap-1.5 shrink-0 hover:scale-[1.02] active:scale-[0.98]"
+            className="rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-40 text-white px-4 py-2.5 text-sm font-semibold shadow-md shadow-teal-600/20 transition-all flex items-center gap-1.5 shrink-0 hover:-translate-y-0.5 active:translate-y-0"
           >
             {streaming ? (
               <span className="w-4 h-4 border-2 border-[#080d1a] border-t-transparent rounded-full animate-spin" />
