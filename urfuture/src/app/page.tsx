@@ -36,6 +36,13 @@ const GOOGLE_AUTH_ERROR_MESSAGES: Record<string, string> = {
 
 export default function Home() {
   const [tab, setTab] = useState<Tab>('Workspace');
+  const [currentUser, setCurrentUser] = useState<StudentUser | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authBannerError, setAuthBannerError] = useState<string | null>(null);
 
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -256,9 +263,6 @@ export default function Home() {
             setAuthMode(mode);
             setIsAuthModalOpen(true);
           }}
-          onQuickDemo={
-            handleQuickDemo
-          }
         />
 
         <StudentAuthModal

@@ -423,6 +423,7 @@ export default function KnowledgeMapPanel({
             : 'Upload and process a transcript to enable Generate Quiz.'}
         </p>
       </div>
+      </div>
     </div>
   );
 

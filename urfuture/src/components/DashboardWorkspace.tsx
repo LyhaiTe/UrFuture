@@ -20,10 +20,6 @@ export default function DashboardWorkspace({
 }: DashboardWorkspaceProps) {
   const displayName = studentName || 'Alex';
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   return (
     <div className="min-h-screen bg-[#070d1a] text-white">
       {/* Welcome / Readiness Banner */}
@@ -79,6 +75,7 @@ export default function DashboardWorkspace({
                 </svg>
               </button>
             </div>
+          </div>
 
           {/* Readiness Ring */}
           <div className="flex flex-col items-center shrink-0">
@@ -128,6 +125,7 @@ export default function DashboardWorkspace({
             </span>
           </div>
         </div>
+      </div>
 
       {/* ========================================================================= */}
       {/* MAIN CONTENT — 2 column layout */}
@@ -188,6 +186,7 @@ export default function DashboardWorkspace({
                 strong matches
               </span>
             </div>
+          </div>
 
           {/* 2x2 Action Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -235,6 +234,7 @@ export default function DashboardWorkspace({
               <div className="mt-3 text-xs font-semibold text-[#00d2ff] flex items-center gap-1 group-hover:gap-2 transition-all">
                 Continue <span>→</span>
               </div>
+            </div>
 
             {/* Career Paths */}
             <div
@@ -274,6 +274,7 @@ export default function DashboardWorkspace({
               <div className="mt-4 text-xs font-semibold text-[#00d2ff] flex items-center gap-1 group-hover:gap-2 transition-all">
                 Explore <span>→</span>
               </div>
+            </div>
 
             {/* Job Fit Analysis */}
             <div
@@ -347,6 +348,7 @@ export default function DashboardWorkspace({
               </div>
             </div>
           </div>
+        </div>
 
         {/* RIGHT SIDEBAR */}
         <div className="lg:col-span-4">
@@ -361,11 +363,6 @@ export default function DashboardWorkspace({
                 </div>
                 <span className="text-sm font-bold text-brand-emerald">75%</span>
               </div>
-
-              <span className="text-xs font-bold text-[#34d399]">
-                75%
-              </span>
-            </div>
 
             <h3 className="text-sm font-semibold text-white">
               Complete your career profile
@@ -384,7 +381,6 @@ export default function DashboardWorkspace({
             </div>
           </div>
         </div>
-      </div>
 
       {/* ========================================================================= */}
       {/* FOOTER */}
