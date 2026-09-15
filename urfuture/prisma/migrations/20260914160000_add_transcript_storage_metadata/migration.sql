@@ -1,0 +1,10 @@
+ALTER TABLE "Transcript"
+ADD COLUMN "storageProvider" TEXT NOT NULL DEFAULT 'gcs',
+ADD COLUMN "storageObjectKey" TEXT NOT NULL DEFAULT '',
+ADD COLUMN "mimeType" TEXT NOT NULL DEFAULT 'application/pdf',
+ADD COLUMN "fileSizeBytes" INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE "Transcript"
+ALTER COLUMN "storageObjectKey" DROP DEFAULT,
+ALTER COLUMN "mimeType" DROP DEFAULT,
+ALTER COLUMN "fileSizeBytes" DROP DEFAULT;

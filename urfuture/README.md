@@ -20,7 +20,8 @@ description to check your fit → get a prep plan if you're not qualified yet.**
 | Charts | Recharts (Skill Radar) |
 | Pathway graph | React Flow |
 | Backend | Next.js Route Handlers (REST, streamed via SSE for chat) |
-| Database | PostgreSQL + Prisma ORM |
+| Database | PostgreSQL 15+ on Amazon RDS + Prisma ORM |
+| Object storage | Google Cloud Storage for transcript files (PDF, PNG, JPEG) |
 | AI | Claude API (`@anthropic-ai/sdk`) with tool use / function calling |
 | Auth | Landing page + sign-in modal; demo login, email/password (prototype-only, unverified), and real **Google OAuth** — see §10 |
 | RAG (prototype) | Seeded Postgres tables carrying O*NET / NEA / ILOSTAT citation metadata (see §9 to wire up a real vector store) |
@@ -33,6 +34,7 @@ Install these before cloning the project:
 
 - Node.js 20 or newer: https://nodejs.org
 - Docker Desktop with Docker Compose: https://www.docker.com/products/docker-desktop/
+- AWS account with an Amazon RDS for PostgreSQL instance for production
 - An Anthropic API key: https://console.anthropic.com
 - Git: https://git-scm.com/downloads
 
@@ -64,6 +66,16 @@ git switch feature/specify-setup
 npm install
 ```
 
+The project includes Prisma as a development dependency and `@prisma/client` as
+an application dependency. If installing them separately in an existing clone,
+run:
+
+```bash
+npm install prisma --save-dev
+npm install @prisma/client
+npx prisma validate
+```
+
 ### 3.3 Create the environment file
 
 macOS/Linux/Git Bash:
@@ -83,10 +95,17 @@ Open `.env` and set at least:
 ```env
 ANTHROPIC_API_KEY=your_anthropic_api_key
 DATABASE_URL="postgresql://advisor:advisor@localhost:5433/cambodia_advisor?schema=public"
+GCP_PROJECT_ID=your-google-cloud-project-id
+GCS_TRANSCRIPT_BUCKET=your-transcript-bucket-name
 ```
 
 Do not commit `.env` or expose API keys. Google OAuth variables are optional;
 see [Google OAuth setup](#101-google-oauth--setup) when you need that login.
+Transcript uploads use Google Cloud Application Default Credentials and are stored
+in the configured bucket; only the object key, metadata, and `gs://` URL are saved
+in PostgreSQL. For production Amazon RDS connections, use the RDS endpoint and
+append `sslmode=require` to `DATABASE_URL`; provide the value through a managed
+secret rather than committing credentials. See [Production AWS RDS setup](#37-production-aws-rds-setup).
 
 ### 3.4 Start the local database
 
@@ -111,6 +130,7 @@ Run these commands in order after the database is running:
 
 ```bash
 npm run prisma:generate
+npx prisma validate
 npx prisma migrate deploy
 npm run prisma:seed
 ```
@@ -126,6 +146,53 @@ npm run dev
 
 Open http://localhost:3000. Use the demo login to explore the application
 without configuring Google OAuth.
+
+### 3.7 Production AWS RDS setup
+
+Create an Amazon RDS for PostgreSQL instance using PostgreSQL 15 or newer. Enable
+automated backups and point-in-time recovery, keep the instance private inside a
+VPC when possible, and allow inbound TCP `5432` only from the application
+security group. Do not expose the database to `0.0.0.0/0`.
+
+Create a database and application user with a strong generated password. Store
+the password in AWS Secrets Manager or the deployment platform's encrypted
+environment configuration. The production connection must use the RDS endpoint:
+
+```env
+DATABASE_URL="postgresql://DB_USER:URL_ENCODED_DB_PASSWORD@RDS_ENDPOINT:5432/DB_NAME?schema=public&sslmode=require"
+```
+
+URL-encode reserved characters in the password, such as `@`, `:`, `/`, and `?`.
+From the `urfuture` directory, apply the checked-in migrations before starting
+the application:
+
+```bash
+npm run prisma:generate
+npx prisma validate
+npx prisma migrate deploy
+```
+
+The application runtime must be able to reach the RDS security group. If the
+runtime is outside the VPC, use a private connection method such as VPN or a
+secure tunnel rather than opening PostgreSQL to the public internet.
+
+### 3.8 Corporate proxy configuration
+
+If npm requires a corporate proxy, configure it with your organization's proxy
+URL. Replace the placeholders and do not commit the resulting npm configuration
+or share proxy credentials:
+
+```powershell
+npm config set proxy http://USERNAME:PASSWORD@PROXY_HOST:PROXY_PORT
+npm config set https-proxy http://USERNAME:PASSWORD@PROXY_HOST:PROXY_PORT
+```
+
+Remove the settings when they are no longer needed:
+
+```powershell
+npm config delete proxy
+npm config delete https-proxy
+```
 
 ## 4. Common first-run commands
 
@@ -233,7 +300,8 @@ prisma/
 ## 7. How the sticky-note quiz flow maps to the API
 
 1. **Upload classes from Year 1–4** → `POST /api/transcript/upload` (once per
-   file/year). Claude extracts `{courseCode, courseName, grade, credits, term}`
+  PDF, PNG, or JPEG file/year). The original file is stored in Google Cloud
+  Storage, while Claude extracts `{courseCode, courseName, grade, credits, term}`
    from the raw text and stores it on the `Transcript` row.
 2. **Generate a quiz to test knowledge** → `POST /api/quiz/generate` — pulls
    *every* parsed transcript on file for the student and asks Claude

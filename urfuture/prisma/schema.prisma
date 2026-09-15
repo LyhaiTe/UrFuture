@@ -60,13 +60,30 @@ enum MessageRole {
   TOOL
 }
 
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
+enum SkillVerificationSource {
+  TRANSCRIPT
+  QUIZ
+  SELF_REPORTED
+}
+
 model User {
   id String @id @default(cuid())
   email String @unique
   name String
+  passwordHash String?
+  authProvider AuthProvider @default(LOCAL)
+  googleId String? @unique
+  avatarUrl String?
   role UserRole @default(STUDENT)
   educationLevel EducationLevel?
   institution String?
+  university String?
+  graduationYear Int?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   transcripts Transcript[]
@@ -79,6 +96,7 @@ model User {
   counselorReviews CounselorReview[] @relation("ReviewedStudent")
   reviewsAuthored CounselorReview[] @relation("ReviewingCounselor")
   @@index([email])
+  @@index([role])
 }
 
 model Transcript {
@@ -87,6 +105,10 @@ model Transcript {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   fileName String
   fileUrl String
+  storageProvider String @default("gcs")
+  storageObjectKey String
+  mimeType String
+  fileSizeBytes Int
   yearLabel String?
   status TranscriptStatus @default(UPLOADED)
   rawText String? @db.Text
@@ -114,17 +136,22 @@ model UserSkill {
   skillId String
   skill Skill @relation(fields: [skillId], references: [id])
   proficiency Float
-  source String
+  source SkillVerificationSource
   lastUpdated DateTime @updatedAt
   @@unique([userId, skillId, source])
   @@index([userId])
+  @@index([skillId])
 }
 
 model CareerPath {
   id String @id @default(cuid())
   title String @unique
+  industry String?
   onetSocCode String?
   descriptionShort String
+  description String? @db.Text
+  salaryMinUsd Float?
+  salaryMaxUsd Float?
   medianSalaryUsd Float?
   growthOutlook String?
   sourceNote String @db.Text
@@ -142,6 +169,7 @@ model CareerSkillRequirement {
   skill Skill @relation(fields: [skillId], references: [id])
   importance Float
   @@unique([careerPathId, skillId])
+  @@index([skillId])
 }
 
 model PathwayStep {
@@ -150,8 +178,13 @@ model PathwayStep {
   careerPath CareerPath @relation(fields: [careerPathId], references: [id], onDelete: Cascade)
   type PathwayStepType
   label String
+  description String? @db.Text
   order Int
   metadata Json?
+  requiredCourses Json?
+  certifications Json?
+  internshipRequirements String? @db.Text
+  @@unique([careerPathId, order])
 }
 
 model CareerRecommendation {
@@ -166,6 +199,8 @@ model CareerRecommendation {
   rationale String @db.Text
   citations Json
   requiresReview Boolean @default(false)
+  reviewStatus ReviewStatus @default(PENDING)
+  counselorNotes String? @db.Text
   createdAt DateTime @default(now())
   counselorReview CounselorReview?
 }
@@ -175,6 +210,8 @@ model StudyPlan {
   userId String
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   title String
+  generatedSchedule Json?
+  weeklyModules Json?
   targetSkillIds Json
   weeks Json
   status StudyPlanStatus @default(DRAFT)
@@ -187,6 +224,7 @@ model QuizQuestion {
   id String @id @default(cuid())
   skillId String
   skill Skill @relation(fields: [skillId], references: [id])
+  courseCode String?
   prompt String @db.Text
   choices Json
   correctIndex Int
@@ -213,7 +251,9 @@ model QuizAnswer {
   questionId String
   question QuizQuestion @relation(fields: [questionId], references: [id])
   selectedIndex Int
+  studentAnswer String?
   isCorrect Boolean
+  skillUpdate Float?
   @@index([quizAttemptId])
 }
 
@@ -246,6 +286,7 @@ model CounselorReview {
   resolvedAt DateTime?
   @@index([studentId])
   @@index([status])
+  @@index([counselorId])
 }
 
 model Conversation {
@@ -254,6 +295,7 @@ model Conversation {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   title String?
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   messages Message[]
 }
 
