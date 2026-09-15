@@ -17,9 +17,12 @@ export default function DashboardWorkspace({
   studentName,
   institution,
   onNavigateTab,
-  onOpenCopilot,
 }: DashboardWorkspaceProps) {
   const displayName = studentName || 'Alex';
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#070d1a] text-white">
@@ -76,7 +79,6 @@ export default function DashboardWorkspace({
                 </svg>
               </button>
             </div>
-          </div>
 
           {/* Readiness Ring */}
           <div className="flex flex-col items-center shrink-0">
@@ -118,6 +120,7 @@ export default function DashboardWorkspace({
                   / 100
                 </span>
               </div>
+              <span className="mt-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Readiness</span>
             </div>
 
             <span className="mt-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -125,7 +128,6 @@ export default function DashboardWorkspace({
             </span>
           </div>
         </div>
-      </div>
 
       {/* ========================================================================= */}
       {/* MAIN CONTENT — 2 column layout */}
@@ -186,7 +188,6 @@ export default function DashboardWorkspace({
                 strong matches
               </span>
             </div>
-          </div>
 
           {/* 2x2 Action Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -234,7 +235,6 @@ export default function DashboardWorkspace({
               <div className="mt-3 text-xs font-semibold text-[#00d2ff] flex items-center gap-1 group-hover:gap-2 transition-all">
                 Continue <span>→</span>
               </div>
-            </div>
 
             {/* Career Paths */}
             <div
@@ -274,7 +274,6 @@ export default function DashboardWorkspace({
               <div className="mt-4 text-xs font-semibold text-[#00d2ff] flex items-center gap-1 group-hover:gap-2 transition-all">
                 Explore <span>→</span>
               </div>
-            </div>
 
             {/* Job Fit Analysis */}
             <div
@@ -348,7 +347,6 @@ export default function DashboardWorkspace({
               </div>
             </div>
           </div>
-        </div>
 
         {/* RIGHT SIDEBAR */}
         <div className="lg:col-span-4">
@@ -357,9 +355,11 @@ export default function DashboardWorkspace({
               Next Milestone
             </h2>
 
-            <div className="flex items-center gap-2 mb-3">
-              <div className="flex-1 bg-[#17253d] h-2 rounded-full overflow-hidden">
-                <div className="bg-gradient-to-r from-[#00d2ff] to-[#34d399] h-full rounded-full w-[75%]" />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 bg-dark-cardHover h-2.5 rounded-full overflow-hidden">
+                  <div className="bg-gradient-to-r from-brand-cyan to-brand-emerald h-full rounded-full w-[75%] animate-pulse" />
+                </div>
+                <span className="text-sm font-bold text-brand-emerald">75%</span>
               </div>
 
               <span className="text-xs font-bold text-[#34d399]">
@@ -375,12 +375,13 @@ export default function DashboardWorkspace({
               Add two interests to sharpen your recommendations.
             </p>
 
-            <button
-              onClick={() => onNavigateTab('Knowledge map')}
-              className="mt-4 w-full py-2 px-3 rounded-lg bg-[#00d2ff]/10 hover:bg-[#00d2ff]/20 border border-[#00d2ff]/30 text-xs font-semibold text-[#00d2ff] transition-all"
-            >
-              Continue profile
-            </button>
+              <button
+                onClick={() => onNavigateTab('Knowledge map')}
+                className="w-full py-2.5 px-4 rounded-xl bg-brand-cyan/10 hover:bg-brand-cyan/20 border border-brand-cyan/30 text-sm font-semibold text-brand-cyan transition-all hover:scale-105 active:scale-95"
+              >
+                Continue profile
+              </button>
+            </div>
           </div>
         </div>
       </div>

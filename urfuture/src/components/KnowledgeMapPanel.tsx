@@ -308,6 +308,23 @@ export default function KnowledgeMapPanel({
           </span>
         )}
       </div>
+      <div className="mt-6 bg-[#0a1628] border border-[#1b2947] rounded-xl p-5 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#00d2ff]" />
+              <h3 className="text-base font-bold text-white">
+                Upload Coursework Transcripts
+              </h3>
+            </div>
+            <p className="text-xs text-slate-400 mt-2">
+              Upload transcripts from Year 1–4 to generate tailored diagnostic quizzes and verify your skills.
+            </p>
+          </div>
+          <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#10b981]/10 border border-[#10b981]/30 text-[10px] font-bold text-[#34d399] shrink-0">
+            AI Auto-Extraction
+          </span>
+        </div>
 
       <div className="mt-5 grid grid-cols-1 xl:grid-cols-[120px_minmax(0,1fr)] gap-4">
         {/* Academic Term */}

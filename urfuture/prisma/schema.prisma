@@ -1,7 +1,3 @@
-// ============================================================================
-// Cambodian AI Career & Academic Planning Advisor — Prisma schema
-// ============================================================================
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,10 +6,6 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-
-// ---------------------------------------------------------------------------
-// Core identity
-// ---------------------------------------------------------------------------
 
 enum UserRole {
   STUDENT
@@ -31,33 +23,6 @@ enum EducationLevel {
   GRADUATE
 }
 
-model User {
-  id             String         @id @default(cuid())
-  email          String         @unique
-  name           String
-  role           UserRole       @default(STUDENT)
-  educationLevel EducationLevel?
-  institution    String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-
-  transcripts       Transcript[]
-  skills            UserSkill[]
-  conversations     Conversation[]
-  careerPaths       CareerRecommendation[]
-  studyPlans        StudyPlan[]
-  quizAttempts      QuizAttempt[]
-  jobFitChecks      JobFitCheck[]
-  counselorReviews  CounselorReview[]      @relation("ReviewedStudent")
-  reviewsAuthored   CounselorReview[]      @relation("ReviewingCounselor")
-
-  @@index([email])
-}
-
-// ---------------------------------------------------------------------------
-// Transcript ingestion ("upload all the classes we took from year 1-4")
-// ---------------------------------------------------------------------------
-
 enum TranscriptStatus {
   UPLOADED
   PARSING
@@ -65,83 +30,6 @@ enum TranscriptStatus {
   FAILED
 }
 
-model Transcript {
-  id           String            @id @default(cuid())
-  userId       String
-  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fileName     String
-  fileUrl      String // path in blob storage / local disk for the prototype
-  yearLabel    String? // e.g. "Year 1", "Grade 11"
-  status       TranscriptStatus  @default(UPLOADED)
-  rawText      String?           @db.Text
-  parsedCourses Json?            // [{ courseCode, courseName, grade, credits, term }]
-  gpa          Float?
-  uploadedAt   DateTime          @default(now())
-  parsedAt     DateTime?
-
-  @@index([userId])
-}
-
-// ---------------------------------------------------------------------------
-// Skills (derived from transcripts, quizzes, self-report; mapped to O*NET)
-// ---------------------------------------------------------------------------
-
-model Skill {
-  id            String   @id @default(cuid())
-  name          String   @unique
-  category      String? // e.g. "Quantitative", "Communication", "Technical"
-  onetElementId String? // O*NET skill/knowledge element id, for RAG grounding
-
-  userSkills       UserSkill[]
-  careerSkillReqs  CareerSkillRequirement[]
-  quizQuestions    QuizQuestion[]
-}
-
-model UserSkill {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  skillId       String
-  skill         Skill    @relation(fields: [skillId], references: [id])
-  proficiency   Float    // 0-100, derived from quiz score / grades / self-report
-  source        String   // "TRANSCRIPT" | "QUIZ" | "SELF_REPORT"
-  lastUpdated   DateTime @updatedAt
-
-  @@unique([userId, skillId, source])
-  @@index([userId])
-}
-
-// ---------------------------------------------------------------------------
-// Career paths (grounded against O*NET / NEA Cambodia / ILOSTAT snapshots)
-// ---------------------------------------------------------------------------
-
-model CareerPath {
-  id                String   @id @default(cuid())
-  title             String   @unique
-  onetSocCode       String? // O*NET-SOC code, for citation
-  descriptionShort  String
-  medianSalaryUsd   Float?  // Cambodia-context estimate, sourced from NEA / ILOSTAT snapshot
-  growthOutlook     String? // "High" | "Moderate" | "Low" + source note
-  sourceNote        String  @db.Text // citation trail for groundedness auditing
-  requiredEducation EducationLevel?
-
-  skillRequirements CareerSkillRequirement[]
-  recommendations   CareerRecommendation[]
-  pathwaySteps      PathwayStep[]
-}
-
-model CareerSkillRequirement {
-  id           String     @id @default(cuid())
-  careerPathId String
-  careerPath   CareerPath @relation(fields: [careerPathId], references: [id], onDelete: Cascade)
-  skillId      String
-  skill        Skill      @relation(fields: [skillId], references: [id])
-  importance   Float      // 0-100 weight, from O*NET importance ratings
-
-  @@unique([careerPathId, skillId])
-}
-
-// A pathway step models the React Flow graph nodes: major -> milestones -> career
 enum PathwayStepType {
   CURRENT_STATE
   MAJOR
@@ -151,38 +39,6 @@ enum PathwayStepType {
   CAREER_ENTRY
 }
 
-model PathwayStep {
-  id            String          @id @default(cuid())
-  careerPathId  String
-  careerPath    CareerPath      @relation(fields: [careerPathId], references: [id], onDelete: Cascade)
-  type          PathwayStepType
-  label         String
-  order         Int
-  metadata      Json? // { institution, durationMonths, cost, etc. }
-}
-
-// A generated, personalized recommendation tying a user to a career path
-model CareerRecommendation {
-  id             String     @id @default(cuid())
-  userId         String
-  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  careerPathId   String
-  careerPath     CareerPath @relation(fields: [careerPathId], references: [id])
-  fitScore       Float      // 0-100
-  matchedSkills  Json       // [{ skillName, userProficiency, requiredImportance }]
-  missingSkills  Json       // same shape, gaps only
-  rationale      String     @db.Text // model-generated explanation, must carry citations
-  citations      Json       // [{ source, url/reference, claim }]
-  requiresReview Boolean    @default(false) // true when high-stakes -> counselor gate
-  createdAt      DateTime   @default(now())
-
-  counselorReview CounselorReview?
-}
-
-// ---------------------------------------------------------------------------
-// Study plans
-// ---------------------------------------------------------------------------
-
 enum StudyPlanStatus {
   DRAFT
   ACTIVE
@@ -190,118 +46,11 @@ enum StudyPlanStatus {
   ARCHIVED
 }
 
-model StudyPlan {
-  id           String          @id @default(cuid())
-  userId       String
-  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title        String
-  targetSkillIds Json          // string[] of Skill.id being targeted
-  weeks        Json            // [{ weekNumber, focus, tasks: [...], resources: [...] }]
-  status       StudyPlanStatus @default(DRAFT)
-  citations    Json            // grounding for recommended resources
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-}
-
-// ---------------------------------------------------------------------------
-// Quiz / knowledge-diagnostic flow (from the sticky-note feature request)
-// ---------------------------------------------------------------------------
-
-model QuizQuestion {
-  id            String   @id @default(cuid())
-  skillId       String
-  skill         Skill    @relation(fields: [skillId], references: [id])
-  prompt        String   @db.Text
-  choices       Json     // string[]
-  correctIndex  Int
-  difficulty    String   // "EASY" | "MEDIUM" | "HARD"
-  sourceCourse  String?  // course code this was derived from, for traceability
-
-  answers QuizAnswer[]
-}
-
-model QuizAttempt {
-  id           String        @id @default(cuid())
-  userId       String
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  basedOnTranscriptIds Json  // string[] of Transcript.id used to generate this quiz
-  scorePercent Float?
-  startedAt    DateTime      @default(now())
-  completedAt  DateTime?
-
-  answers QuizAnswer[]
-}
-
-model QuizAnswer {
-  id             String       @id @default(cuid())
-  quizAttemptId  String
-  quizAttempt    QuizAttempt  @relation(fields: [quizAttemptId], references: [id], onDelete: Cascade)
-  questionId     String
-  question       QuizQuestion @relation(fields: [questionId], references: [id])
-  selectedIndex  Int
-  isCorrect      Boolean
-
-  @@index([quizAttemptId])
-}
-
-// ---------------------------------------------------------------------------
-// Job description fit-check ("upload a job description, see if we fit")
-// ---------------------------------------------------------------------------
-
-model JobFitCheck {
-  id               String   @id @default(cuid())
-  userId           String
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobTitle         String
-  jobDescriptionRaw String  @db.Text
-  extractedSkills  Json     // string[] parsed from the JD
-  matchedCount     Int
-  totalRequired    Int
-  fitScorePercent  Float
-  gapClosingPlanId String?  // optional link to a generated StudyPlan.id
-  createdAt        DateTime @default(now())
-}
-
-// ---------------------------------------------------------------------------
-// Human-in-the-loop safety gate
-// ---------------------------------------------------------------------------
-
 enum ReviewStatus {
   PENDING
   APPROVED
   REJECTED
   NEEDS_REVISION
-}
-
-model CounselorReview {
-  id                     String               @id @default(cuid())
-  studentId              String
-  student                User                 @relation("ReviewedStudent", fields: [studentId], references: [id], onDelete: Cascade)
-  counselorId            String?
-  counselor              User?                @relation("ReviewingCounselor", fields: [counselorId], references: [id])
-  careerRecommendationId String?              @unique
-  careerRecommendation   CareerRecommendation? @relation(fields: [careerRecommendationId], references: [id])
-  reason                 String               // why this was flagged (e.g. "major switch", "low groundedness score")
-  status                 ReviewStatus         @default(PENDING)
-  counselorNotes         String?              @db.Text
-  createdAt              DateTime             @default(now())
-  resolvedAt             DateTime?
-
-  @@index([studentId])
-  @@index([status])
-}
-
-// ---------------------------------------------------------------------------
-// Chat / conversation log
-// ---------------------------------------------------------------------------
-
-model Conversation {
-  id        String    @id @default(cuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String?
-  createdAt DateTime  @default(now())
-  messages  Message[]
 }
 
 enum MessageRole {
@@ -311,15 +60,211 @@ enum MessageRole {
   TOOL
 }
 
-model Message {
-  id             String       @id @default(cuid())
-  conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  role           MessageRole
-  content        String       @db.Text
-  toolCalls      Json?        // function-calling trace, for auditability
-  citations      Json?
-  createdAt      DateTime     @default(now())
+model User {
+  id String @id @default(cuid())
+  email String @unique
+  name String
+  role UserRole @default(STUDENT)
+  educationLevel EducationLevel?
+  institution String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  transcripts Transcript[]
+  skills UserSkill[]
+  conversations Conversation[]
+  careerPaths CareerRecommendation[]
+  studyPlans StudyPlan[]
+  quizAttempts QuizAttempt[]
+  jobFitChecks JobFitCheck[]
+  counselorReviews CounselorReview[] @relation("ReviewedStudent")
+  reviewsAuthored CounselorReview[] @relation("ReviewingCounselor")
+  @@index([email])
+}
 
+model Transcript {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileName String
+  fileUrl String
+  yearLabel String?
+  status TranscriptStatus @default(UPLOADED)
+  rawText String? @db.Text
+  parsedCourses Json?
+  gpa Float?
+  uploadedAt DateTime @default(now())
+  parsedAt DateTime?
+  @@index([userId])
+}
+
+model Skill {
+  id String @id @default(cuid())
+  name String @unique
+  category String?
+  onetElementId String?
+  userSkills UserSkill[]
+  careerSkillReqs CareerSkillRequirement[]
+  quizQuestions QuizQuestion[]
+}
+
+model UserSkill {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skillId String
+  skill Skill @relation(fields: [skillId], references: [id])
+  proficiency Float
+  source String
+  lastUpdated DateTime @updatedAt
+  @@unique([userId, skillId, source])
+  @@index([userId])
+}
+
+model CareerPath {
+  id String @id @default(cuid())
+  title String @unique
+  onetSocCode String?
+  descriptionShort String
+  medianSalaryUsd Float?
+  growthOutlook String?
+  sourceNote String @db.Text
+  requiredEducation EducationLevel?
+  skillRequirements CareerSkillRequirement[]
+  recommendations CareerRecommendation[]
+  pathwaySteps PathwayStep[]
+}
+
+model CareerSkillRequirement {
+  id String @id @default(cuid())
+  careerPathId String
+  careerPath CareerPath @relation(fields: [careerPathId], references: [id], onDelete: Cascade)
+  skillId String
+  skill Skill @relation(fields: [skillId], references: [id])
+  importance Float
+  @@unique([careerPathId, skillId])
+}
+
+model PathwayStep {
+  id String @id @default(cuid())
+  careerPathId String
+  careerPath CareerPath @relation(fields: [careerPathId], references: [id], onDelete: Cascade)
+  type PathwayStepType
+  label String
+  order Int
+  metadata Json?
+}
+
+model CareerRecommendation {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  careerPathId String
+  careerPath CareerPath @relation(fields: [careerPathId], references: [id])
+  fitScore Float
+  matchedSkills Json
+  missingSkills Json
+  rationale String @db.Text
+  citations Json
+  requiresReview Boolean @default(false)
+  createdAt DateTime @default(now())
+  counselorReview CounselorReview?
+}
+
+model StudyPlan {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title String
+  targetSkillIds Json
+  weeks Json
+  status StudyPlanStatus @default(DRAFT)
+  citations Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model QuizQuestion {
+  id String @id @default(cuid())
+  skillId String
+  skill Skill @relation(fields: [skillId], references: [id])
+  prompt String @db.Text
+  choices Json
+  correctIndex Int
+  difficulty String
+  sourceCourse String?
+  answers QuizAnswer[]
+}
+
+model QuizAttempt {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  basedOnTranscriptIds Json
+  scorePercent Float?
+  startedAt DateTime @default(now())
+  completedAt DateTime?
+  answers QuizAnswer[]
+}
+
+model QuizAnswer {
+  id String @id @default(cuid())
+  quizAttemptId String
+  quizAttempt QuizAttempt @relation(fields: [quizAttemptId], references: [id], onDelete: Cascade)
+  questionId String
+  question QuizQuestion @relation(fields: [questionId], references: [id])
+  selectedIndex Int
+  isCorrect Boolean
+  @@index([quizAttemptId])
+}
+
+model JobFitCheck {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobTitle String
+  jobDescriptionRaw String @db.Text
+  extractedSkills Json
+  matchedCount Int
+  totalRequired Int
+  fitScorePercent Float
+  gapClosingPlanId String?
+  createdAt DateTime @default(now())
+}
+
+model CounselorReview {
+  id String @id @default(cuid())
+  studentId String
+  student User @relation("ReviewedStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  counselorId String?
+  counselor User? @relation("ReviewingCounselor", fields: [counselorId], references: [id])
+  careerRecommendationId String? @unique
+  careerRecommendation CareerRecommendation? @relation(fields: [careerRecommendationId], references: [id])
+  reason String
+  status ReviewStatus @default(PENDING)
+  counselorNotes String? @db.Text
+  createdAt DateTime @default(now())
+  resolvedAt DateTime?
+  @@index([studentId])
+  @@index([status])
+}
+
+model Conversation {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title String?
+  createdAt DateTime @default(now())
+  messages Message[]
+}
+
+model Message {
+  id String @id @default(cuid())
+  conversationId String
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role MessageRole
+  content String @db.Text
+  toolCalls Json?
+  citations Json?
+  createdAt DateTime @default(now())
   @@index([conversationId])
 }

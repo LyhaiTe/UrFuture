@@ -1,4 +1,4 @@
-# Phlouv — Cambodian AI Career & Academic Planning Advisor
+# UrFuture (capstone codename: Phlouv) — Cambodian AI Career & Academic Planning Advisor
 
 A working prototype for the capstone spec: a conversational advisor that unifies
 personalized study planning, career pathway mapping, and adaptive tutoring for
@@ -22,82 +22,215 @@ description to check your fit → get a prep plan if you're not qualified yet.**
 | Backend | Next.js Route Handlers (REST, streamed via SSE for chat) |
 | Database | PostgreSQL + Prisma ORM |
 | AI | Claude API (`@anthropic-ai/sdk`) with tool use / function calling |
-| RAG (prototype) | Seeded Postgres tables carrying O*NET / NEA / ILOSTAT citation metadata (see §7 to wire up a real vector store) |
+| Auth | Landing page + sign-in modal; demo login, email/password (prototype-only, unverified), and real **Google OAuth** — see §10 |
+| RAG (prototype) | Seeded Postgres tables carrying O*NET / NEA / ILOSTAT citation metadata (see §9 to wire up a real vector store) |
 
 ---
 
 ## 2. Prerequisites
 
-- Node.js 20+
-- Docker (for local Postgres) — or your own Postgres instance
+Install these before cloning the project:
+
+- Node.js 20 or newer: https://nodejs.org
+- Docker Desktop with Docker Compose: https://www.docker.com/products/docker-desktop/
 - An Anthropic API key: https://console.anthropic.com
+- Git: https://git-scm.com/downloads
 
----
+Google OAuth, Pinecone, O*NET, and ILOSTAT credentials are optional for local
+development. The app includes seeded data and a demo login, so it can run
+without those integrations.
 
-## 3. Setup
+## 3. First-time setup
+
+The Git repository contains the Next.js project in the `urfuture` folder.
+
+### 3.1 Clone the repository
 
 ```bash
-# 1. Install dependencies
+git clone https://github.com/LyhaiTe/UrFuture.git
+cd UrFuture/urfuture
+```
+
+To work with the Specify workflow instead of `main`, switch branches before
+installing dependencies:
+
+```bash
+git switch feature/specify-setup
+```
+
+### 3.2 Install dependencies
+
+```bash
 npm install
+```
 
-# 2. Copy env template and fill in your keys
+### 3.3 Create the environment file
+
+macOS/Linux/Git Bash:
+
+```bash
 cp .env.example .env
-# edit .env: set ANTHROPIC_API_KEY, and DATABASE_URL if not using the default docker-compose values
+```
 
-# 3. Start Postgres locally
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Open `.env` and set at least:
+
+```env
+ANTHROPIC_API_KEY=your_anthropic_api_key
+DATABASE_URL="postgresql://advisor:advisor@localhost:5433/cambodia_advisor?schema=public"
+```
+
+Do not commit `.env` or expose API keys. Google OAuth variables are optional;
+see [Google OAuth setup](#101-google-oauth--setup) when you need that login.
+
+### 3.4 Start the local database
+
+Make sure Docker Desktop is running, then run:
+
+```bash
 docker compose up -d
+```
 
-# 4. Generate the Prisma client and run migrations
-npx prisma generate
-npx prisma migrate dev --name init
+The compose file starts PostgreSQL on `localhost:5433` with these defaults:
 
-# 5. Seed the knowledge base (skills, career paths, quiz questions, demo student)
-npx prisma db seed
-# (or: npm run prisma:seed)
+| Setting | Value |
+|---|---|
+| Database | `cambodia_advisor` |
+| User | `advisor` |
+| Password | `advisor` |
+| Port | `5433` |
 
-# 6. Run the app
+### 3.5 Create the Prisma client, database tables, and seed data
+
+Run these commands in order after the database is running:
+
+```bash
+npm run prisma:generate
+npx prisma migrate deploy
+npm run prisma:seed
+```
+
+The seed step creates the sample skills, career paths, quiz questions, and
+demo student used by the prototype.
+
+### 3.6 Start the development server
+
+```bash
 npm run dev
 ```
 
-Open http://localhost:3000. The app auto-provisions a demo student session on
-load (see §8 "Auth" for how to replace this with real login).
+Open http://localhost:3000. Use the demo login to explore the application
+without configuring Google OAuth.
+
+## 4. Common first-run commands
+
+```bash
+npm run dev             # Start the development server
+npm run build           # Create a production build
+npm start               # Run the production build
+npm run prisma:studio  # Open the database browser
+docker compose down    # Stop PostgreSQL
+```
+
+If you change `prisma/schema.prisma`, create a new local migration with:
+
+```bash
+npm run prisma:migrate
+npm run prisma:generate
+```
+
+Do not use `prisma migrate reset` unless you intentionally want to delete all
+local database data.
+
+## 5. Troubleshooting setup
+
+### `@prisma/client did not initialize yet`
+
+Run the following from the `urfuture` directory:
+
+```bash
+npm run prisma:generate
+```
+
+### Cannot connect to PostgreSQL
+
+Check that Docker is running and inspect the database container:
+
+```bash
+docker compose ps
+docker compose logs postgres
+```
+
+Confirm that `DATABASE_URL` uses port `5433`, not the usual PostgreSQL port
+`5432`, because Docker maps the container to `5433` on the host.
+
+### Google OAuth `redirect_uri_mismatch`
+
+The redirect URI in `.env` must exactly match the URI registered in Google
+Cloud Console, including the protocol, port, path, and trailing slash. See
+[Google OAuth setup](#101-google-oauth--setup).
+
+### Port 3000 is already in use
+
+Start Next.js on another port:
+
+```bash
+npm run dev -- -p 3001
+```
+
+Then open http://localhost:3001.
 
 ---
 
-## 4. Project layout
+## 6. Project layout
 
 ```
 src/
   app/
     api/
-      chat/route.ts                 # POST — SSE-streamed chat, tool-calling enabled
-      transcript/upload/route.ts    # POST — multipart upload + Claude-based parsing
-      career/recommend/route.ts     # POST — skill-gap analysis + counselor gating
-      study-plan/generate/route.ts  # POST — multi-week personalized plan
-      quiz/generate/route.ts        # POST — diagnostic quiz from parsed transcripts
-      quiz/evaluate/route.ts        # POST — grades quiz, writes UserSkill proficiencies
-      job/match/route.ts            # POST — job description fit-check
-      dev/demo-user/route.ts        # GET  — prototype-only session stand-in
-    page.tsx                        # Tabbed dashboard (Chat / Transcripts & Quiz / Career Fit / Job Check)
+      auth/
+        student/route.ts              # POST — demo login + email/password upsert (prototype auth, see §10.2)
+        google/route.ts                # GET  — starts Google OAuth (Authorization Code + PKCE)
+        google/callback/route.ts       # GET  — Google redirects here; exchanges code, upserts User
+        session/consume/route.ts       # POST — trades the post-OAuth handoff token for a StudentUser
+      chat/route.ts                    # POST — SSE-streamed chat, tool-calling enabled
+      transcript/upload/route.ts       # POST — multipart upload + Claude-based parsing
+      career/recommend/route.ts        # POST — skill-gap analysis + counselor gating
+      study-plan/generate/route.ts     # POST — multi-week personalized plan
+      quiz/generate/route.ts           # POST — diagnostic quiz from parsed transcripts
+      quiz/evaluate/route.ts           # POST — grades quiz, writes UserSkill proficiencies
+      job/match/route.ts               # POST — job description fit-check
+      dev/demo-user/route.ts           # GET  — legacy, no longer called by the client (see §11)
+    page.tsx                           # Landing page / auth gate, then the tabbed dashboard
     layout.tsx, globals.css
   components/
-    ChatPanel.tsx, SkillRadarChart.tsx, PathwayGraph.tsx,
+    LandingPage.tsx        # Marketing landing page: hero, features, how-it-works, live-demo preview, footer
+    StudentAuthModal.tsx   # Sign-in modal: demo login, email/password, Continue with Google
+    UrFutureLogo.tsx        # Logo mark, navbar/icon/full variants
+    DashboardWorkspace.tsx, ChatPanel.tsx, SkillRadarChart.tsx, PathwayGraph.tsx,
     TranscriptUpload.tsx, QuizPanel.tsx, JobFitPanel.tsx, CareerFitPanel.tsx
   lib/
-    claude.ts        # Anthropic client, tool schemas, streaming + tool-call helpers
-    prompts.ts        # System prompts: groundedness rules + safety guardrails
-    knowledgeBase.ts   # Prototype RAG retrieval (reads seeded Postgres tables)
-    guardrails.ts       # High-stakes keyword filter, counselor-review creation, groundedness heuristic
-    db.ts                # Prisma client singleton
-  types/index.ts          # Shared TypeScript contracts for structured JSON model outputs
+    claude.ts          # Anthropic client, tool schemas, streaming + tool-call helpers
+    googleAuth.ts       # Google OAuth: PKCE, token exchange, signed handoff token (see §10.1)
+    prompts.ts          # System prompts: groundedness rules + safety guardrails
+    knowledgeBase.ts     # Prototype RAG retrieval (reads seeded Postgres tables)
+    guardrails.ts         # High-stakes keyword filter, counselor-review creation, groundedness heuristic
+    db.ts                  # Prisma client singleton
+  types/index.ts            # Shared TypeScript contracts for structured JSON model outputs
 prisma/
-  schema.prisma   # Full data model
-  seed.ts          # Seeds skills, career paths, quiz questions, citations, demo student
+  schema.prisma       # Full data model
+  migrations/           # Includes add_google_oauth (authProvider, googleId, avatarUrl on User)
+  seed.ts                # Seeds skills, career paths, quiz questions, citations, demo student
 ```
 
 ---
 
-## 5. How the sticky-note quiz flow maps to the API
+## 7. How the sticky-note quiz flow maps to the API
 
 1. **Upload classes from Year 1–4** → `POST /api/transcript/upload` (once per
    file/year). Claude extracts `{courseCode, courseName, grade, credits, term}`
@@ -121,7 +254,7 @@ prisma/
 
 ---
 
-## 6. Groundedness & safety guardrails
+## 8. Groundedness & safety guardrails
 
 - Every AI-generated recommendation is produced via a forced **tool call**
   (not free text), so the shape is always strict JSON — see
@@ -143,7 +276,7 @@ prisma/
 
 ---
 
-## 7. Swapping in real RAG (O*NET / ILOSTAT / NEA)
+## 9. Swapping in real RAG (O*NET / ILOSTAT / NEA)
 
 The prototype's "RAG" (`src/lib/knowledgeBase.ts`) reads directly from
 Postgres tables seeded with a small, hand-picked, citation-bearing snapshot.
@@ -174,21 +307,93 @@ move to live data:
 
 ---
 
-## 8. Auth
+## 10. Auth
 
-This prototype uses a single seeded demo student (`/api/dev/demo-user`)
-so reviewers can run it with zero configuration. Before any real deployment:
+The landing page's sign-in modal (`StudentAuthModal.tsx`) offers three ways
+in. Whichever is used, the resulting `StudentUser` is stored client-side
+(`localStorage`, see `STORAGE_KEY` in `page.tsx`) and restored automatically
+on the next visit until the person signs out.
 
-- Add real authentication (NextAuth.js, Clerk, or your institution's SSO).
-- Replace every `userId` prop currently passed from `page.tsx` with the
-  authenticated session's user id.
+| Flow | Route | Verifies identity? |
+|---|---|---|
+| 1-Click Demo | `POST /api/auth/student` (`action: 'demo'`) | No — upserts a fixed seeded demo account |
+| Email / password | `POST /api/auth/student` | **No** — upserts by email only, the password field is not checked |
+| Continue with Google | `GET /api/auth/google` → `.../callback` → `POST /api/auth/session/consume` | **Yes** — real Google OAuth |
+
+### 10.1 Google OAuth — setup
+
+1. In the [Google Cloud Console](https://console.cloud.google.com/apis/credentials),
+   under **Google Auth Platform**, configure the consent screen (External
+   audience) and add your own account under **Test users** — unpublished
+   apps only let listed test users sign in.
+2. Create an **OAuth client ID** of type "Web application".
+3. Add an authorized redirect URI matching `GOOGLE_REDIRECT_URI` exactly
+   (scheme, host, port, path, no trailing slash), e.g.
+   `http://localhost:3000/api/auth/google/callback` for local dev.
+4. Fill in `.env`:
+   ```
+   GOOGLE_CLIENT_ID=...
+   GOOGLE_CLIENT_SECRET=...
+   GOOGLE_REDIRECT_URI="http://localhost:3000/api/auth/google/callback"
+   AUTH_SESSION_SECRET=<output of `openssl rand -hex 32`>
+   ```
+
+   Run this in your terminal to generate a secure secret value:
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
+
+5. Apply the `add_google_oauth` migration (adds `authProvider`, `googleId`,
+   `avatarUrl` to `User` — additive/non-breaking):
+   ```bash
+   npx prisma generate
+   npx prisma migrate dev
+   ```
+6. Restart `npm run dev` (env vars are only read at server start), then
+   click "Continue with Google" in the sign-in modal.
+
+**How it works** (no NextAuth/Clerk dependency — see `src/lib/googleAuth.ts`):
+`GET /api/auth/google` starts an Authorization Code + PKCE flow and stores
+`state`/`code_verifier` in short-lived httpOnly cookies → Google redirects to
+`GET /api/auth/google/callback`, which validates `state` (CSRF), exchanges
+the code, verifies the Google profile's `email_verified` flag, and
+upserts/links the `User` row (by `googleId`, falling back to `email`) → the
+callback redirects the browser to `/?googleAuth=<one-time token>` → the
+client immediately trades that token for the `StudentUser` via
+`POST /api/auth/session/consume` and stores it exactly like the demo/email
+flows already do. The handoff token is an HMAC-signed, 2-minute-lived token
+carrying only the user id — it exists because a server Route Handler can't
+write to the browser's `localStorage` directly. Any failure along the way
+(user cancels, unverified email, expired/mismatched state, misconfigured
+credentials) redirects to `/?authError=<code>`, which the landing page
+surfaces as a dismissible banner.
+
+**Common setup error:** `Error 400: redirect_uri_mismatch` means the
+`GOOGLE_REDIRECT_URI` in `.env` doesn't byte-for-byte match an Authorized
+redirect URI registered on the OAuth client in Google Cloud Console —
+recheck scheme (`http` vs `https`), port, and trailing slash on both sides.
+
+### 10.2 Before any real deployment
+
+- The seeded demo login and the "email/password" registration flow do
+  **not** verify a password today — both are upsert-by-email prototype
+  conveniences. Google OAuth is the only flow in this codebase with a real
+  identity check. Gate or remove the other two (or add real password
+  hashing/verification) before shipping past a demo.
+- Replace every `userId` prop currently passed from `page.tsx` with an
+  authenticated session's user id rather than trusting the client-held
+  `StudentUser` object.
 - Add a `COUNSELOR`-role-gated view over the `CounselorReview` table (the
   schema already supports this — `User.role` includes `COUNSELOR`).
 
 ---
 
-## 9. Known prototype limitations
+## 11. Known prototype limitations
 
+- The email/password and demo logins don't verify a password — see §10.2.
+- `src/app/api/dev/demo-user/route.ts` predates the landing page's 1-Click
+  Demo button and is no longer called by any client code — safe to delete,
+  kept for now in case anything external still points at it.
 - Transcript text extraction is best-effort plain-text decoding; production
   should add real PDF/DOCX parsing (e.g. `pdf-parse`, `mammoth`) before
   handing raw bytes to Claude.
@@ -202,7 +407,7 @@ so reviewers can run it with zero configuration. Before any real deployment:
 
 ---
 
-## 10. Useful commands
+## 12. Useful commands
 
 ```bash
 npm run prisma:studio     # Visual DB browser — inspect CounselorReview queue, quiz results, etc.
