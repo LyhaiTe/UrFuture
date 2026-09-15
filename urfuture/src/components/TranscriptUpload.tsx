@@ -79,7 +79,7 @@ export default function TranscriptUpload({
         {/* File Input Box */}
         <div className="flex-1">
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-            Transcript File (.pdf, .csv, .txt)
+            Transcript File (.pdf, .png, .jpg, .jpeg)
           </label>
           <label className="flex items-center justify-between rounded-xl bg-[#0e172a] border border-dashed border-[#1b2b4c] hover:border-[#00d2ff] px-4 py-2 cursor-pointer transition-colors group">
             <span className="text-xs text-slate-300 truncate max-w-[220px]">
@@ -90,7 +90,7 @@ export default function TranscriptUpload({
             </span>
             <input
               type="file"
-              accept=".pdf,.csv,.txt"
+              accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               className="hidden"
             />
