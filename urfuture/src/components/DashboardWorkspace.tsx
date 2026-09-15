@@ -20,19 +20,19 @@ export default function DashboardWorkspace({
 }: DashboardWorkspaceProps) {
   const displayName = studentName || 'Alex';
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   return (
     <div className="min-h-screen bg-[#070d1a] text-white">
-      {/* Welcome / Readiness Banner */}
+      {/* ================================================================ */}
+      {/* WELCOME / READINESS BANNER */}
+      {/* ================================================================ */}
+
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0a2540] via-[#0d3a5c] to-[#0a2540] p-8 sm:p-10 mb-8 border border-[#1b3c66]/50">
-        {/* Subtle glow orbs */}
+        {/* Background glow */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-[#00d2ff]/8 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-1/3 w-60 h-60 bg-[#34d399]/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          {/* Welcome Text */}
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
               <span className="w-2 h-2 rounded-full bg-[#10b981]" />
@@ -45,12 +45,12 @@ export default function DashboardWorkspace({
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
               Welcome back, {displayName}.
               <span className="block text-[#00d2ff]">
-                Let's build your future.
+                Let&apos;s build your future.
               </span>
             </h1>
 
             <p className="mt-3 text-sm sm:text-base text-slate-300 max-w-lg leading-relaxed">
-              You're{' '}
+              You&apos;re{' '}
               <span className="text-[#00d2ff] font-bold">
                 82% ready
               </span>{' '}
@@ -79,6 +79,7 @@ export default function DashboardWorkspace({
                 </svg>
               </button>
             </div>
+          </div>
 
           {/* Readiness Ring */}
           <div className="flex flex-col items-center shrink-0">
@@ -104,9 +105,9 @@ export default function DashboardWorkspace({
                   stroke="#00d2ff"
                   strokeWidth="7"
                   strokeLinecap="round"
-                  strokeDasharray={`${
-                    2 * Math.PI * 42 * 0.82
-                  } ${2 * Math.PI * 42}`}
+                  strokeDasharray={`${2 * Math.PI * 42 * 0.82} ${
+                    2 * Math.PI * 42
+                  }`}
                   className="drop-shadow-[0_0_8px_#00d2ff]"
                 />
               </svg>
@@ -120,7 +121,6 @@ export default function DashboardWorkspace({
                   / 100
                 </span>
               </div>
-              <span className="mt-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Readiness</span>
             </div>
 
             <span className="mt-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -128,15 +128,19 @@ export default function DashboardWorkspace({
             </span>
           </div>
         </div>
+      </div>
 
-      {/* ========================================================================= */}
-      {/* MAIN CONTENT — 2 column layout */}
-      {/* ========================================================================= */}
+      {/* ================================================================ */}
+      {/* MAIN CONTENT */}
+      {/* ================================================================ */}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* LEFT: Stats + Action Grid */}
+        {/* LEFT SIDE */}
         <div className="lg:col-span-8 flex flex-col gap-6">
-          {/* Quick Stats Row */}
+          {/* ============================================================ */}
+          {/* QUICK STATS */}
+          {/* ============================================================ */}
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Knowledge Coverage */}
             <div className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-5 hover:border-[#263b63] transition-colors">
@@ -188,8 +192,12 @@ export default function DashboardWorkspace({
                 strong matches
               </span>
             </div>
+          </div>
 
-          {/* 2x2 Action Grid */}
+          {/* ============================================================ */}
+          {/* ACTION GRID */}
+          {/* ============================================================ */}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Knowledge Mapping */}
             <div
@@ -235,6 +243,7 @@ export default function DashboardWorkspace({
               <div className="mt-3 text-xs font-semibold text-[#00d2ff] flex items-center gap-1 group-hover:gap-2 transition-all">
                 Continue <span>→</span>
               </div>
+            </div>
 
             {/* Career Paths */}
             <div
@@ -274,8 +283,9 @@ export default function DashboardWorkspace({
               <div className="mt-4 text-xs font-semibold text-[#00d2ff] flex items-center gap-1 group-hover:gap-2 transition-all">
                 Explore <span>→</span>
               </div>
+            </div>
 
-            {/* Job Fit Analysis */}
+            {/* Job Fit */}
             <div
               onClick={() => onNavigateTab('Job fit')}
               className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-5 cursor-pointer hover:border-[#00d2ff]/40 hover:bg-[#111d33] transition-all group"
@@ -347,22 +357,25 @@ export default function DashboardWorkspace({
               </div>
             </div>
           </div>
+        </div>
 
+        {/* ================================================================ */}
         {/* RIGHT SIDEBAR */}
+        {/* ================================================================ */}
+
         <div className="lg:col-span-4">
           <div className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-5 sticky top-6">
             <h2 className="text-sm font-bold text-white uppercase tracking-wider mb-4">
               Next Milestone
             </h2>
 
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex-1 bg-dark-cardHover h-2.5 rounded-full overflow-hidden">
-                  <div className="bg-gradient-to-r from-brand-cyan to-brand-emerald h-full rounded-full w-[75%] animate-pulse" />
-                </div>
-                <span className="text-sm font-bold text-brand-emerald">75%</span>
+            {/* Progress */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 bg-[#17253d] h-2.5 rounded-full overflow-hidden">
+                <div className="bg-gradient-to-r from-[#00d2ff] to-[#34d399] h-full rounded-full w-[75%]" />
               </div>
 
-              <span className="text-xs font-bold text-[#34d399]">
+              <span className="text-sm font-bold text-[#34d399]">
                 75%
               </span>
             </div>
@@ -375,20 +388,19 @@ export default function DashboardWorkspace({
               Add two interests to sharpen your recommendations.
             </p>
 
-              <button
-                onClick={() => onNavigateTab('Knowledge map')}
-                className="w-full py-2.5 px-4 rounded-xl bg-brand-cyan/10 hover:bg-brand-cyan/20 border border-brand-cyan/30 text-sm font-semibold text-brand-cyan transition-all hover:scale-105 active:scale-95"
-              >
-                Continue profile
-              </button>
-            </div>
+            <button
+              onClick={() => onNavigateTab('Knowledge map')}
+              className="w-full mt-4 py-2.5 px-4 rounded-xl bg-[#00d2ff]/10 hover:bg-[#00d2ff]/20 border border-[#00d2ff]/30 text-sm font-semibold text-[#00d2ff] transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              Continue profile
+            </button>
           </div>
         </div>
       </div>
 
-      {/* ========================================================================= */}
+      {/* ================================================================ */}
       {/* FOOTER */}
-      {/* ========================================================================= */}
+      {/* ================================================================ */}
 
       <div className="mt-12 pt-6 border-t border-[#1b2947]/50 text-center">
         <p className="text-xs text-slate-500">

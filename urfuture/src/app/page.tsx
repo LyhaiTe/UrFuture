@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import UrFutureLogo from '@/components/UrFutureLogo';
 import DashboardWorkspace from '@/components/DashboardWorkspace';
 import KnowledgeMapPanel from '@/components/KnowledgeMapPanel';
@@ -22,20 +22,48 @@ type Tab = (typeof TABS)[number];
 
 const STORAGE_KEY = 'urfuture_active_student_session';
 
-// Human-readable copy for the ?authError=<code> values the Google OAuth
-// routes redirect back with (see src/app/api/auth/google/callback/route.ts).
 const GOOGLE_AUTH_ERROR_MESSAGES: Record<string, string> = {
   google_cancelled: 'Google sign-in was cancelled.',
   google_denied: 'Google denied the sign-in request.',
-  google_email_unverified: 'That Google account\u2019s email isn\u2019t verified, so we can\u2019t sign you in with it.',
-  google_state_mismatch: 'Your sign-in session expired before Google redirected back. Please try again.',
-  google_missing_params: 'Something interrupted the Google sign-in redirect. Please try again.',
-  google_exchange_failed: 'We couldn\u2019t complete sign-in with Google. Please try again.',
-  google_not_configured: 'Google sign-in isn\u2019t available right now.',
+  google_email_unverified:
+    'That Google account’s email isn’t verified, so we can’t sign you in with it.',
+  google_state_mismatch:
+    'Your sign-in session expired before Google redirected back. Please try again.',
+  google_missing_params:
+    'Something interrupted the Google sign-in redirect. Please try again.',
+  google_exchange_failed:
+    'We couldn’t complete sign-in with Google. Please try again.',
+  google_not_configured:
+    'Google sign-in isn’t available right now.',
 };
 
 export default function Home() {
+  // ================================================================
+  // STATE
+  // ================================================================
+
   const [tab, setTab] = useState<Tab>('Workspace');
+
+  const [currentUser, setCurrentUser] =
+    useState<StudentUser | null>(null);
+
+  const [isInitializing, setIsInitializing] =
+    useState(true);
+
+  const [isUserMenuOpen, setIsUserMenuOpen] =
+    useState(false);
+
+  const [isCopilotOpen, setIsCopilotOpen] =
+    useState(false);
+
+  const [isAuthModalOpen, setIsAuthModalOpen] =
+    useState(false);
+
+  const [authMode, setAuthMode] =
+    useState<'login' | 'signup'>('login');
+
+  const [authBannerError, setAuthBannerError] =
+    useState<string | null>(null);
 
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -55,12 +83,39 @@ export default function Home() {
         }
       }
     } catch (e) {
-      console.warn(
-        'Could not restore student session:',
-        e
-      );
+      console.warn('Could not restore student session:', e);
     } finally {
       setIsInitializing(false);
+    }
+  }, []);
+
+  // ================================================================
+  // GOOGLE AUTH ERROR
+  // ================================================================
+
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const authError = params.get('authError');
+
+      if (authError) {
+        setAuthBannerError(
+          GOOGLE_AUTH_ERROR_MESSAGES[authError] ||
+            'Sign-in could not be completed. Please try again.'
+        );
+
+        params.delete('authError');
+
+        const query = params.toString();
+
+        window.history.replaceState(
+          {},
+          '',
+          `${window.location.pathname}${query ? `?${query}` : ''}`
+        );
+      }
+    } catch (e) {
+      console.warn('Could not read authentication error:', e);
     }
   }, []);
 
@@ -69,29 +124,19 @@ export default function Home() {
   // ================================================================
 
   useEffect(() => {
-    const handleClickOutside = (
-      event: MouseEvent
-    ) => {
+    const handleClickOutside = (event: MouseEvent) => {
       if (
         userMenuRef.current &&
-        !userMenuRef.current.contains(
-          event.target as Node
-        )
+        !userMenuRef.current.contains(event.target as Node)
       ) {
         setIsUserMenuOpen(false);
       }
     };
 
-    document.addEventListener(
-      'mousedown',
-      handleClickOutside
-    );
+    document.addEventListener('mousedown', handleClickOutside);
 
     return () => {
-      document.removeEventListener(
-        'mousedown',
-        handleClickOutside
-      );
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
 
@@ -99,9 +144,7 @@ export default function Home() {
   // AUTH SUCCESS
   // ================================================================
 
-  const handleAuthSuccess = (
-    user: StudentUser
-  ) => {
+  const handleAuthSuccess = (user: StudentUser) => {
     setCurrentUser(user);
 
     try {
@@ -110,12 +153,11 @@ export default function Home() {
         JSON.stringify(user)
       );
     } catch (e) {
-      console.warn(
-        'Failed to save session locally',
-        e
-      );
+      console.warn('Failed to save session locally', e);
     }
 
+    setIsAuthModalOpen(false);
+    setAuthBannerError(null);
     setTab('Workspace');
   };
 
@@ -125,42 +167,38 @@ export default function Home() {
 
   const handleQuickDemo = async () => {
     try {
-      const res = await fetch(
-        '/api/auth/student',
-        {
-          method: 'POST',
+      const res = await fetch('/api/auth/student', {
+        method: 'POST',
 
-          headers: {
-            'Content-Type':
-              'application/json',
-          },
+        headers: {
+          'Content-Type': 'application/json',
+        },
 
-          body: JSON.stringify({
-            action: 'demo',
-          }),
-        }
-      );
+        body: JSON.stringify({
+          action: 'demo',
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Demo API request failed');
+      }
 
       const data = await res.json();
 
       if (data.success && data.user) {
         handleAuthSuccess(data.user);
       } else {
-        throw new Error(
-          'Fallback needed'
-        );
+        throw new Error('Fallback needed');
       }
     } catch {
       handleAuthSuccess({
         id: 'demo-student-id',
         name: 'Sokha Chea (Alex)',
-        email:
-          'sokha.demo@camtech.edu.kh',
+        email: 'sokha.demo@camtech.edu.kh',
         role: 'STUDENT',
-        educationLevel:
-          'UNIVERSITY_YEAR_3',
+        educationLevel: 'UNIVERSITY_YEAR_3',
         institution: 'CamTech / ITC',
-      });
+      } as StudentUser);
     }
   };
 
@@ -170,9 +208,7 @@ export default function Home() {
 
   const handleLogOut = () => {
     try {
-      localStorage.removeItem(
-        STORAGE_KEY
-      );
+      localStorage.removeItem(STORAGE_KEY);
     } catch (e) {
       console.warn(e);
     }
@@ -187,26 +223,19 @@ export default function Home() {
   // GET USER INITIALS
   // ================================================================
 
-  const getInitials = (
-    name?: string
-  ) => {
+  const getInitials = (name?: string) => {
     if (!name) {
       return 'ST';
     }
 
-    const parts = name
-      .trim()
-      .split(' ');
+    const parts = name.trim().split(' ');
 
     if (parts.length === 1) {
-      return parts[0]
-        .substring(0, 2)
-        .toUpperCase();
+      return parts[0].substring(0, 2).toUpperCase();
     }
 
     return (
-      parts[0][0] +
-      parts[parts.length - 1][0]
+      parts[0][0] + parts[parts.length - 1][0]
     ).toUpperCase();
   };
 
@@ -241,35 +270,49 @@ export default function Home() {
         {authBannerError && (
           <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[92vw] max-w-md">
             <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-red-950/90 border border-red-800/60 text-red-200 text-xs shadow-2xl backdrop-blur-md">
-              <svg className="w-4 h-4 shrink-0 mt-0.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg
+                className="w-4 h-4 shrink-0 mt-0.5 text-red-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
-              <span className="flex-1">{authBannerError}</span>
-              <button onClick={() => setAuthBannerError(null)} className="text-red-300 hover:text-white shrink-0" aria-label="Dismiss">
+
+              <span className="flex-1">
+                {authBannerError}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setAuthBannerError(null)}
+                className="text-red-300 hover:text-white shrink-0"
+                aria-label="Dismiss"
+              >
                 ✕
               </button>
             </div>
           </div>
         )}
+
         <LandingPage
           onOpenAuth={(mode) => {
             setAuthMode(mode);
             setIsAuthModalOpen(true);
           }}
-          onQuickDemo={
-            handleQuickDemo
-          }
+          onQuickDemo={handleQuickDemo}
         />
 
         <StudentAuthModal
           isOpen={isAuthModalOpen}
           initialMode={authMode}
-          onClose={() =>
-            setIsAuthModalOpen(false)
-          }
-          onSuccess={
-            handleAuthSuccess
-          }
+          onClose={() => setIsAuthModalOpen(false)}
+          onSuccess={handleAuthSuccess}
         />
       </>
     );
@@ -281,20 +324,16 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#080d1a] text-[#f1f5f9] flex flex-col">
-
       {/* ============================================================ */}
       {/* TOP NAVIGATION */}
       {/* ============================================================ */}
 
       <header className="sticky top-0 z-40 bg-[#080d1a]/90 backdrop-blur-md border-b border-[#142038] px-4 sm:px-8 py-3.5 flex items-center justify-between">
-
         {/* Logo */}
 
         <div
           className="cursor-pointer"
-          onClick={() =>
-            setTab('Workspace')
-          }
+          onClick={() => setTab('Workspace')}
         >
           <UrFutureLogo variant="navbar" />
         </div>
@@ -303,16 +342,13 @@ export default function Home() {
 
         <nav className="hidden md:flex items-center gap-1 bg-[#0c1424] border border-[#172640] p-1 rounded-xl">
           {TABS.map((t) => {
-            const isActive =
-              tab === t;
+            const isActive = tab === t;
 
             return (
               <button
                 key={t}
                 type="button"
-                onClick={() =>
-                  setTab(t)
-                }
+                onClick={() => setTab(t)}
                 className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   isActive
                     ? 'bg-[#14233e] text-[#00d2ff] shadow-sm border border-[#21385f]'
@@ -328,7 +364,6 @@ export default function Home() {
         {/* Right Controls */}
 
         <div className="flex items-center gap-3">
-
           {/* Notifications */}
 
           <button
@@ -364,9 +399,7 @@ export default function Home() {
             <button
               type="button"
               onClick={() =>
-                setIsUserMenuOpen(
-                  !isUserMenuOpen
-                )
+                setIsUserMenuOpen(!isUserMenuOpen)
               }
               title={`${currentUser.name} (${currentUser.email})`}
               className="flex items-center gap-2 p-1 rounded-full hover:bg-[#121e35] transition-colors"
@@ -374,19 +407,13 @@ export default function Home() {
               {/* Avatar */}
 
               <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#10b981] to-[#00d2ff] text-[#080d1a] font-extrabold text-xs flex items-center justify-center shadow-md shadow-[#10b981]/25 select-none hover:scale-105 transition-transform">
-                {getInitials(
-                  currentUser.name
-                )}
+                {getInitials(currentUser.name)}
               </div>
 
               {/* Name */}
 
               <span className="hidden sm:inline-block text-xs font-semibold text-slate-300 max-w-[120px] truncate">
-                {
-                  currentUser.name.split(
-                    ' '
-                  )[0]
-                }
+                {currentUser.name.split(' ')[0]}
               </span>
 
               {/* Dropdown Arrow */}
@@ -411,8 +438,7 @@ export default function Home() {
             {/* ====================================================== */}
 
             {isUserMenuOpen && (
-              <div className="absolute right-0 mt-3 w-[340px] overflow-hidden rounded-2xl border border-[#203454] bg-[#0d1627] shadow-2xl shadow-black/50 z-50 animate-fadeIn">
-
+              <div className="absolute right-0 mt-3 w-[340px] overflow-hidden rounded-2xl border border-[#203454] bg-[#0d1627] shadow-2xl shadow-black/50 z-50">
                 {/* User Information */}
 
                 <div className="px-6 py-5 border-b border-[#203454]">
@@ -437,19 +463,11 @@ export default function Home() {
                 {/* Navigation Options */}
 
                 <div className="p-3">
-
-                  {/* Workspace Dashboard */}
-
                   <button
                     type="button"
                     onClick={() => {
-                      setTab(
-                        'Workspace'
-                      );
-
-                      setIsUserMenuOpen(
-                        false
-                      );
+                      setTab('Workspace');
+                      setIsUserMenuOpen(false);
                     }}
                     className="group w-full flex items-center justify-between rounded-xl px-4 py-3.5 text-left text-sm font-medium text-slate-200 hover:text-white hover:bg-[#14233e] transition-all"
                   >
@@ -472,16 +490,11 @@ export default function Home() {
                     </svg>
                   </button>
 
-                  {/* Switch Demo */}
-
                   <button
                     type="button"
                     onClick={() => {
                       handleQuickDemo();
-
-                      setIsUserMenuOpen(
-                        false
-                      );
+                      setIsUserMenuOpen(false);
                     }}
                     className="group mt-1 w-full flex items-center justify-between rounded-xl px-4 py-3.5 text-left text-sm font-medium text-slate-200 hover:text-white hover:bg-[#14233e] transition-all"
                   >
@@ -510,13 +523,10 @@ export default function Home() {
                 <div className="border-t border-[#203454] p-3">
                   <button
                     type="button"
-                    onClick={
-                      handleLogOut
-                    }
+                    onClick={handleLogOut}
                     className="w-full flex items-center rounded-xl px-4 py-3.5 text-left text-sm font-medium text-[#ff6b72] hover:bg-red-500/10 hover:text-[#ff7d83] transition-all"
                   >
-                    Sign Out &amp;
-                    Return to Home
+                    Sign Out &amp; Return to Home
                   </button>
                 </div>
               </div>
@@ -534,9 +544,7 @@ export default function Home() {
           <button
             key={t}
             type="button"
-            onClick={() =>
-              setTab(t)
-            }
+            onClick={() => setTab(t)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
               tab === t
                 ? 'bg-[#14233e] text-[#00d2ff] border border-[#21385f]'
@@ -553,66 +561,41 @@ export default function Home() {
       {/* ============================================================ */}
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8">
-
         {/* Workspace */}
 
         {tab === 'Workspace' && (
           <DashboardWorkspace
-            userId={
-              currentUser.id
-            }
-            studentName={
-              currentUser.name
-            }
-            institution={
-              currentUser.institution
-            }
-            onNavigateTab={
-              setTab
-            }
+            userId={currentUser.id}
+            studentName={currentUser.name}
+            institution={currentUser.institution}
+            onNavigateTab={setTab}
             onOpenCopilot={() =>
-              setIsCopilotOpen(
-                true
-              )
+              setIsCopilotOpen(true)
             }
           />
         )}
 
-        {/* ======================================================== */}
-        {/* KNOWLEDGE MAP */}
-        {/* ======================================================== */}
+        {/* Knowledge Map */}
 
-        {tab ===
-          'Knowledge map' && (
+        {tab === 'Knowledge map' && (
           <KnowledgeMapPanel
-            userId={
-              currentUser.id
-            }
+            userId={currentUser.id}
           />
         )}
 
-        {/* ======================================================== */}
-        {/* CAREER PATHS */}
-        {/* ======================================================== */}
+        {/* Career Paths */}
 
-        {tab ===
-          'Career paths' && (
+        {tab === 'Career paths' && (
           <CareerFitPanel
-            userId={
-              currentUser.id
-            }
+            userId={currentUser.id}
           />
         )}
 
-        {/* ======================================================== */}
-        {/* JOB FIT */}
-        {/* ======================================================== */}
+        {/* Job Fit */}
 
         {tab === 'Job fit' && (
           <JobFitPanel
-            userId={
-              currentUser.id
-            }
+            userId={currentUser.id}
           />
         )}
       </main>
@@ -623,9 +606,7 @@ export default function Home() {
 
       <button
         type="button"
-        onClick={() =>
-          setIsCopilotOpen(true)
-        }
+        onClick={() => setIsCopilotOpen(true)}
         title="Open UrFuture Assistant"
         aria-label="Open UrFuture Assistant"
         className="
@@ -693,14 +674,10 @@ export default function Home() {
 
       {isCopilotOpen && (
         <ChatPanel
-          userId={
-            currentUser.id
-          }
+          userId={currentUser.id}
           isModal={true}
           onClose={() =>
-            setIsCopilotOpen(
-              false
-            )
+            setIsCopilotOpen(false)
           }
         />
       )}
@@ -711,10 +688,8 @@ export default function Home() {
 
       <footer className="mt-auto border-t border-[#142038] py-6 px-4 text-center text-xs text-slate-500">
         <p>
-          UrFuture — Learn • Plan •
-          Achieve. Decision support
-          &amp; grounded career
-          pathways for students.
+          UrFuture — Learn • Plan • Achieve. Decision support &amp;
+          grounded career pathways for students.
         </p>
       </footer>
     </div>

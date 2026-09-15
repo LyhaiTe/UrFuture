@@ -284,51 +284,43 @@ export default function KnowledgeMapPanel({
   // UPLOAD CARD
   // ============================================================
 
+    // ============================================================
+  // UPLOAD CARD
+  // ============================================================
+
   const uploadCard = (
-    <div className="bg-[#09111f] border border-[#1b2947] rounded-xl p-5">
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+    <div className="bg-[#0a1628] border border-[#1b2947] rounded-xl p-5 sm:p-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
         <div>
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#34d399]" />
+            <span className="w-2 h-2 rounded-full bg-[#00d2ff]" />
 
-            <h3 className="text-sm font-bold text-white">
+            <h3 className="text-base font-bold text-white">
               Upload Coursework Transcripts
             </h3>
           </div>
 
-          <p className="text-[11px] text-slate-500 mt-1">
-            Add your coursework transcript before generating
-            a diagnostic quiz.
+          <p className="text-xs text-slate-400 mt-2">
+            Upload transcripts from Year 1–4 to generate tailored
+            diagnostic quizzes and verify your skills.
           </p>
         </div>
 
-        {transcriptParsed && (
-          <span className="px-3 py-1 rounded-full bg-[#10b981]/10 border border-[#10b981]/30 text-[10px] font-bold text-[#34d399]">
+        {transcriptParsed ? (
+          <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#10b981]/10 border border-[#10b981]/30 text-[10px] font-bold text-[#34d399] shrink-0">
             Transcript Ready
           </span>
-        )}
-      </div>
-      <div className="mt-6 bg-[#0a1628] border border-[#1b2947] rounded-xl p-5 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#00d2ff]" />
-              <h3 className="text-base font-bold text-white">
-                Upload Coursework Transcripts
-              </h3>
-            </div>
-            <p className="text-xs text-slate-400 mt-2">
-              Upload transcripts from Year 1–4 to generate tailored diagnostic quizzes and verify your skills.
-            </p>
-          </div>
+        ) : (
           <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#10b981]/10 border border-[#10b981]/30 text-[10px] font-bold text-[#34d399] shrink-0">
             AI Auto-Extraction
           </span>
-        </div>
+        )}
+      </div>
 
-      <div className="mt-5 grid grid-cols-1 xl:grid-cols-[120px_minmax(0,1fr)] gap-4">
+      {/* Upload fields */}
+      <div className="grid grid-cols-1 xl:grid-cols-[120px_minmax(0,1fr)] gap-4">
         {/* Academic Term */}
-
         <div>
           <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-2">
             Academic Term
@@ -348,11 +340,10 @@ export default function KnowledgeMapPanel({
           </select>
         </div>
 
-        {/* Transcript */}
-
+        {/* Transcript File */}
         <div>
           <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-2">
-            Transcript File
+            Transcript File (.PDF)
           </label>
 
           <label className="h-11 flex items-center justify-between gap-3 rounded-lg bg-[#0d1526] border border-dashed border-[#263858] px-4 cursor-pointer hover:border-[#00d2ff]/60 transition-colors">
@@ -385,7 +376,6 @@ export default function KnowledgeMapPanel({
       </div>
 
       {/* Buttons */}
-
       <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
         <button
           type="button"
@@ -393,9 +383,7 @@ export default function KnowledgeMapPanel({
           disabled={!transcriptFile || uploading}
           className="h-11 px-5 rounded-lg bg-[#00d2ff] hover:bg-[#00bfe6] disabled:bg-slate-700/50 disabled:text-slate-500 disabled:cursor-not-allowed text-[#070d1a] text-xs font-bold transition-all"
         >
-          {uploading
-            ? 'Processing...'
-            : 'Upload & Parse'}
+          {uploading ? 'Processing...' : 'Upload & Parse'}
         </button>
 
         <button
@@ -408,6 +396,7 @@ export default function KnowledgeMapPanel({
         </button>
       </div>
 
+      {/* Status */}
       <div className="mt-3 flex items-center gap-2">
         <span
           className={`w-1.5 h-1.5 rounded-full ${
