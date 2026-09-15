@@ -9,6 +9,7 @@ import JobFitPanel from '@/components/JobFitPanel';
 import ChatPanel from '@/components/ChatPanel';
 import LandingPage from '@/components/authentication/LandingPage';
 import StudentAuthModal from '@/components/authentication/StudentAuthModal';
+import ThemeToggle from '@/components/ThemeToggle';
 import { StudentUser } from '@/types';
 
 const TABS = [
@@ -284,13 +285,13 @@ export default function Home() {
   // ================================================================
 
   return (
-    <div className="min-h-screen bg-[#080d1a] text-[#f1f5f9] flex flex-col">
+    <div className="dashboard-shell min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 flex flex-col">
 
       {/* ============================================================ */}
       {/* TOP NAVIGATION */}
       {/* ============================================================ */}
 
-      <header className="sticky top-0 z-40 bg-[#080d1a]/90 backdrop-blur-md border-b border-[#142038] px-4 sm:px-8 py-3.5 flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 sm:px-8 py-3.5 flex items-center justify-between">
 
         {/* Logo */}
 
@@ -305,7 +306,7 @@ export default function Home() {
 
         {/* Desktop Navigation */}
 
-        <nav className="hidden md:flex items-center gap-1 bg-[#0c1424] border border-[#172640] p-1 rounded-xl">
+        <nav className="hidden md:flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl">
           {TABS.map((t) => {
             const isActive =
               tab === t;
@@ -332,6 +333,8 @@ export default function Home() {
         {/* Right Controls */}
 
         <div className="flex items-center gap-3">
+
+          <ThemeToggle />
 
           {/* Notifications */}
 

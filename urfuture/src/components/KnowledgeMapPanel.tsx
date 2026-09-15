@@ -285,18 +285,18 @@ export default function KnowledgeMapPanel({
   // ============================================================
 
   const uploadCard = (
-    <div className="bg-[#09111f] border border-[#1b2947] rounded-xl p-5">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#34d399]" />
 
-            <h3 className="text-sm font-bold text-white">
+            <h3 className="text-sm font-semibold text-slate-900">
               Upload Coursework Transcripts
             </h3>
           </div>
 
-          <p className="text-[11px] text-slate-500 mt-1">
+          <p className="text-[11px] text-slate-600 mt-1">
             Add your coursework transcript before generating
             a diagnostic quiz.
           </p>
@@ -308,16 +308,16 @@ export default function KnowledgeMapPanel({
           </span>
         )}
       </div>
-      <div className="mt-6 bg-[#0a1628] border border-[#1b2947] rounded-xl p-5 sm:p-6">
+      <div className="mt-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 sm:p-6 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
           <div>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#00d2ff]" />
-              <h3 className="text-base font-bold text-white">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">
                 Upload Coursework Transcripts
               </h3>
             </div>
-            <p className="text-xs text-slate-400 mt-2">
+            <p className="text-xs text-slate-700 dark:text-slate-200 mt-2">
               Upload transcripts from Year 1–4 to generate tailored diagnostic quizzes and verify your skills.
             </p>
           </div>
@@ -330,7 +330,7 @@ export default function KnowledgeMapPanel({
         {/* Academic Term */}
 
         <div>
-          <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-2">
+          <label className="block text-[10px] uppercase tracking-wider font-semibold text-slate-800 dark:text-slate-300 mb-2">
             Academic Term
           </label>
 
@@ -339,7 +339,7 @@ export default function KnowledgeMapPanel({
             onChange={(event) =>
               setAcademicTerm(event.target.value)
             }
-            className="w-full h-11 rounded-lg bg-[#0d1526] border border-[#1b2947] px-3 text-xs text-slate-200 outline-none focus:border-[#00d2ff]/60"
+            className="w-full h-11 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-3 text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:focus:ring-cyan-900/40"
           >
             <option>Year 1</option>
             <option>Year 2</option>
@@ -351,12 +351,12 @@ export default function KnowledgeMapPanel({
         {/* Transcript */}
 
         <div>
-          <label className="block text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-2">
+          <label className="block text-[10px] uppercase tracking-wider font-semibold text-slate-800 dark:text-slate-300 mb-2">
             Transcript File
           </label>
 
-          <label className="h-11 flex items-center justify-between gap-3 rounded-lg bg-[#0d1526] border border-dashed border-[#263858] px-4 cursor-pointer hover:border-[#00d2ff]/60 transition-colors">
-            <span className="text-xs text-slate-400 truncate">
+          <label className="h-11 flex items-center justify-between gap-3 rounded-lg bg-white dark:bg-slate-950 border border-dashed border-slate-300 dark:border-slate-700 px-4 cursor-pointer hover:border-cyan-500 transition-colors">
+            <span className="text-xs text-slate-600 dark:text-slate-400 truncate">
               {transcriptFile
                 ? transcriptFile.name
                 : 'Select transcript PDF...'}
@@ -391,7 +391,7 @@ export default function KnowledgeMapPanel({
           type="button"
           onClick={handleUploadTranscript}
           disabled={!transcriptFile || uploading}
-          className="h-11 px-5 rounded-lg bg-[#00d2ff] hover:bg-[#00bfe6] disabled:bg-slate-700/50 disabled:text-slate-500 disabled:cursor-not-allowed text-[#070d1a] text-xs font-bold transition-all"
+          className="transcript-action h-11 px-5 rounded-lg bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-600 disabled:bg-slate-200 disabled:text-slate-700 disabled:border disabled:border-slate-300 disabled:cursor-not-allowed text-white text-xs font-semibold transition-all"
         >
           {uploading
             ? 'Processing...'
@@ -402,7 +402,7 @@ export default function KnowledgeMapPanel({
           type="button"
           onClick={handleGenerateQuiz}
           disabled={!transcriptParsed}
-          className="h-11 px-5 rounded-lg bg-[#00d2ff] hover:bg-[#00bfe6] disabled:bg-slate-700/50 disabled:text-slate-500 disabled:cursor-not-allowed text-[#070d1a] text-xs font-bold transition-all shadow-lg shadow-[#00d2ff]/10"
+          className="transcript-action h-11 px-5 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-700 disabled:border disabled:border-slate-300 disabled:cursor-not-allowed text-white text-xs font-semibold transition-all shadow-lg shadow-slate-900/10"
         >
           Generate Quiz
         </button>
@@ -417,7 +417,7 @@ export default function KnowledgeMapPanel({
           }`}
         />
 
-        <p className="text-[10px] text-slate-500">
+        <p className="text-[10px] text-slate-600 dark:text-slate-400">
           {transcriptParsed
             ? 'Transcript processed. You can now generate your quiz.'
             : 'Upload and process a transcript to enable Generate Quiz.'}
@@ -435,7 +435,7 @@ export default function KnowledgeMapPanel({
     <div className="space-y-6">
       {uploadCard}
 
-      <section className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-5 sm:p-6">
+      <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 sm:p-6">
         {/* Header */}
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -443,12 +443,12 @@ export default function KnowledgeMapPanel({
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#00d2ff]" />
 
-              <h2 className="text-lg font-bold text-white">
+              <h2 className="text-lg font-semibold text-slate-900">
                 Knowledge Map
               </h2>
             </div>
 
-            <p className="text-xs text-slate-400 mt-2">
+            <p className="text-xs text-slate-600 mt-2">
               Track your verified skills, knowledge areas,
               relationships, and learning progress.
             </p>
@@ -464,54 +464,54 @@ export default function KnowledgeMapPanel({
         {/* Summary */}
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-          <div className="bg-[#09111f] border border-[#1b2947] rounded-xl p-4">
-            <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+            <p className="text-xs uppercase tracking-wider text-slate-800 dark:text-slate-300 font-semibold">
               Skills Mapped
             </p>
 
-            <p className="text-2xl font-extrabold text-white mt-2">
+            <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
               {skills.length}
             </p>
 
-            <p className="text-[10px] text-slate-500 mt-1">
+            <p className="text-xs text-slate-700 dark:text-slate-200 mt-1">
               Verified competencies
             </p>
           </div>
 
-          <div className="bg-[#09111f] border border-[#1b2947] rounded-xl p-4">
-            <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+            <p className="text-xs uppercase tracking-wider text-slate-800 dark:text-slate-300 font-semibold">
               Completed
             </p>
 
-            <p className="text-2xl font-extrabold text-[#34d399] mt-2">
+            <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
               {completedSkills}
             </p>
 
-            <p className="text-[10px] text-slate-500 mt-1">
+            <p className="text-xs text-slate-700 dark:text-slate-200 mt-1">
               Strong competencies
             </p>
           </div>
 
-          <div className="bg-[#09111f] border border-[#1b2947] rounded-xl p-4">
-            <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+            <p className="text-xs uppercase tracking-wider text-slate-800 dark:text-slate-300 font-semibold">
               In Progress
             </p>
 
-            <p className="text-2xl font-extrabold text-[#00d2ff] mt-2">
+            <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
               {inProgressSkills}
             </p>
 
-            <p className="text-[10px] text-slate-500 mt-1">
+            <p className="text-xs text-slate-700 dark:text-slate-200 mt-1">
               Currently developing
             </p>
           </div>
 
-          <div className="bg-[#09111f] border border-[#1b2947] rounded-xl p-4">
-            <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+            <p className="text-xs uppercase tracking-wider text-slate-800 dark:text-slate-300 font-semibold">
               Overall Progress
             </p>
 
-            <p className="text-2xl font-extrabold text-[#00d2ff] mt-2">
+            <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
               {averageProgress}%
             </p>
 
@@ -529,11 +529,11 @@ export default function KnowledgeMapPanel({
         {/* Skills */}
 
         <div className="mt-8">
-          <h3 className="text-sm font-bold text-white">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
             Skills & Knowledge Areas
           </h3>
 
-          <p className="text-[11px] text-slate-500 mt-1 mb-4">
+          <p className="text-xs text-slate-700 dark:text-slate-200 mt-1 mb-4">
             Select a skill to view more information.
           </p>
 
@@ -557,7 +557,7 @@ export default function KnowledgeMapPanel({
                       isSelected ? null : skill
                     )
                   }
-                  className={`text-left bg-[#09111f] border rounded-xl p-4 transition-all ${
+                  className={`text-left bg-white dark:bg-slate-900 border rounded-xl p-4 transition-all ${
                     isSelected
                       ? 'border-[#00d2ff]'
                       : 'border-[#1b2947] hover:border-[#00d2ff]/40'
@@ -565,11 +565,11 @@ export default function KnowledgeMapPanel({
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h4 className="text-sm font-semibold text-white">
+                      <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
                         {skill.name}
                       </h4>
 
-                      <p className="text-[11px] text-slate-500 mt-1">
+                      <p className="text-xs text-slate-700 dark:text-slate-200 mt-1">
                         {skill.category}
                       </p>
                     </div>
@@ -585,11 +585,11 @@ export default function KnowledgeMapPanel({
 
                   <div className="mt-4">
                     <div className="flex justify-between mb-2">
-                      <span className="text-[10px] text-slate-500">
+                      <span className="text-xs text-slate-700 dark:text-slate-200">
                         Competency
                       </span>
 
-                      <span className="text-xs font-bold text-slate-300">
+                      <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
                         {skill.progress}%
                       </span>
                     </div>
@@ -606,7 +606,7 @@ export default function KnowledgeMapPanel({
 
                   {isSelected && (
                     <div className="mt-4 pt-4 border-t border-[#1b2947]">
-                      <p className="text-xs text-slate-400 leading-relaxed">
+                      <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
                         {skill.description}
                       </p>
                     </div>
@@ -620,11 +620,11 @@ export default function KnowledgeMapPanel({
         {/* Skill Relationships */}
 
         <div className="mt-8">
-          <h3 className="text-sm font-bold text-white">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
             Skill Relationships
           </h3>
 
-          <p className="text-[11px] text-slate-500 mt-1 mb-4">
+          <p className="text-xs text-slate-700 dark:text-slate-200 mt-1 mb-4">
             See how your knowledge areas build on and
             support one another.
           </p>
@@ -638,7 +638,7 @@ export default function KnowledgeMapPanel({
                     className="grid grid-cols-[1fr_auto_1fr] items-center gap-3"
                   >
                     <div className="bg-[#0d1526] border border-[#1b2947] rounded-lg p-3">
-                      <span className="text-xs font-semibold text-slate-200">
+                      <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
                         {relationship.from}
                       </span>
                     </div>
@@ -654,7 +654,7 @@ export default function KnowledgeMapPanel({
                     </div>
 
                     <div className="bg-[#0d1526] border border-[#1b2947] rounded-lg p-3">
-                      <span className="text-xs font-semibold text-slate-200">
+                      <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
                         {relationship.to}
                       </span>
                     </div>

@@ -1,19 +1,20 @@
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
+  darkMode: 'class',
   content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
   theme: {
     extend: {
       colors: {
         dark: {
-          bg: '#080d1a',
-          sidebar: '#0b1222',
-          surface: '#0f172a',
-          card: '#0f182d',
-          cardHover: '#14213d',
-          cardLight: '#16233f',
-          border: '#1b2947',
-          borderLight: '#263b63',
+          bg: 'rgb(var(--color-bg) / <alpha-value>)',
+          sidebar: 'rgb(var(--color-sidebar) / <alpha-value>)',
+          surface: 'rgb(var(--color-surface) / <alpha-value>)',
+          card: 'rgb(var(--color-card) / <alpha-value>)',
+          cardHover: 'rgb(var(--color-card-hover) / <alpha-value>)',
+          cardLight: 'rgb(var(--color-card-hover) / <alpha-value>)',
+          border: 'rgb(var(--color-border) / <alpha-value>)',
+          borderLight: 'rgb(var(--color-border-light) / <alpha-value>)',
           borderSubtle: '#142038',
           // Added while tokenizing the landing page / auth modal — consolidates a handful
           // of near-duplicate one-off navy shades that had crept in as arbitrary values.
@@ -26,18 +27,18 @@ const config: Config = {
           divider: '#172540',
           ctaFrom: '#0a2540',
           ctaVia: '#0d3a5c',
-          textOnBrand: '#070d1a',
+          textOnBrand: 'rgb(var(--color-text-on-brand) / <alpha-value>)',
         },
         brand: {
-          cyan: '#00d2ff',
-          cyanLight: '#38bdf8',
-          cyanHover: '#00b4dc',
-          cyanBright: '#38dfff',
-          cyanDeep: '#00a8e8',
-          cyanDeepHover: '#00b9ff',
-          cyanGlow: 'rgba(0, 210, 255, 0.25)',
-          emerald: '#10b981',
-          mint: '#34d399',
+          cyan: 'rgb(var(--color-primary) / <alpha-value>)',
+          cyanLight: 'rgb(var(--color-primary) / <alpha-value>)',
+          cyanHover: 'rgb(var(--color-primary) / <alpha-value>)',
+          cyanBright: 'rgb(var(--color-primary) / <alpha-value>)',
+          cyanDeep: 'rgb(var(--color-primary) / <alpha-value>)',
+          cyanDeepHover: 'rgb(var(--color-primary) / <alpha-value>)',
+          cyanGlow: 'rgb(var(--color-primary) / 0.25)',
+          emerald: 'rgb(var(--color-secondary) / <alpha-value>)',
+          mint: 'rgb(var(--color-secondary) / <alpha-value>)',
           greenBadge: '#059669',
           greenBadgeBg: '#064e3b',
           blueDark: '#0c4a6e',

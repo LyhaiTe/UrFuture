@@ -248,7 +248,7 @@ export default function CareerFitPanel({
 
         {/* Career Heading */}
         <div>
-          <h1 className="text-3xl font-bold text-white">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50">
             {selectedCareer.title}
           </h1>
 
@@ -265,12 +265,12 @@ export default function CareerFitPanel({
         </div>
 
         {/* Why This Fits */}
-        <div className="bg-[#0d1729] border border-[#1b2947] rounded-xl p-6">
-          <h2 className="text-sm font-bold text-white mb-3">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 mb-3">
             Why this fits you
           </h2>
 
-          <p className="text-sm text-slate-300 leading-6">
+          <p className="text-sm text-slate-600 dark:text-slate-400 leading-6">
             {selectedCareer.rationale}
           </p>
 
@@ -282,8 +282,8 @@ export default function CareerFitPanel({
         {/* Skills */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* Matched Skills */}
-          <div className="bg-[#0d1729] border border-[#1b2947] rounded-xl p-6">
-            <h2 className="text-sm font-bold text-white mb-5">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 mb-5">
               Matched skills
             </h2>
 
@@ -301,8 +301,8 @@ export default function CareerFitPanel({
           </div>
 
           {/* Skills To Strengthen */}
-          <div className="bg-[#0d1729] border border-[#1b2947] rounded-xl p-6">
-            <h2 className="text-sm font-bold text-white mb-5">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 mb-5">
               Skills to strengthen
             </h2>
 
@@ -323,8 +323,8 @@ export default function CareerFitPanel({
         </div>
 
         {/* Recommended Next Steps */}
-        <div className="bg-[#0d1729] border border-[#1b2947] rounded-xl p-6">
-          <h2 className="text-sm font-bold text-white mb-6">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 mb-6">
             Recommended next steps
           </h2>
 
@@ -334,7 +334,7 @@ export default function CareerFitPanel({
                 key={step.title}
                 className="grid grid-cols-1 md:grid-cols-[220px_150px_1fr] gap-3 md:items-center py-3 border-b border-[#1b2947] last:border-b-0"
               >
-                <span className="text-sm text-white font-medium">
+                <span className="text-sm text-slate-900 dark:text-slate-100 font-medium">
                   {step.title}
                 </span>
 
@@ -348,7 +348,7 @@ export default function CareerFitPanel({
                   {step.priority}
                 </span>
 
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-slate-600 dark:text-slate-400">
                   {step.description}
                 </span>
               </div>
@@ -359,7 +359,7 @@ export default function CareerFitPanel({
         {/* Back */}
         <button
           onClick={() => setSelectedCareer(null)}
-          className="self-start px-4 py-2 rounded-lg border border-[#1b2947] text-xs text-slate-300 hover:border-[#00d2ff] hover:text-[#00d2ff] transition-all"
+          className="self-start px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 text-xs text-slate-900 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
         >
           ← Back to career paths
         </button>
@@ -379,23 +379,23 @@ export default function CareerFitPanel({
           Workspace / Career paths
         </p>
 
-        <h1 className="text-2xl font-bold text-white">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">
           Career paths that match your profile
         </h1>
 
-        <p className="text-sm text-slate-400 mt-2">
+        <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
           Ranked from your coursework, quiz results, interests,
           and transferable skills.
         </p>
       </div>
 
       {/* Strongest Fit */}
-      <div className="bg-[#0d1729] border border-[#1b2947] rounded-xl p-5">
-        <h2 className="text-sm font-bold text-white">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
           Strongest fit: Software &amp; Data
         </h2>
 
-        <p className="text-xs text-slate-400 mt-2">
+        <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
           Your top matches share programming, analytical reasoning,
           and systems thinking.
         </p>
@@ -406,7 +406,7 @@ export default function CareerFitPanel({
         {careers.map((career, index) => (
           <div
             key={career.id}
-            className="bg-[#0d1729] border border-[#1b2947] rounded-xl p-5 hover:border-[#00d2ff]/40 transition-all"
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl p-5 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
           >
             <div className="grid grid-cols-1 lg:grid-cols-[50px_1fr_260px_80px_120px] gap-4 lg:items-center">
               {/* Ranking */}
@@ -416,7 +416,7 @@ export default function CareerFitPanel({
 
               {/* Career */}
               <div>
-                <h3 className="text-sm font-semibold text-white">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                   {career.title}
                 </h3>
 
@@ -427,10 +427,10 @@ export default function CareerFitPanel({
 
               {/* Missing */}
               <div className="text-xs">
-                <span className="text-amber-400">
+                <span className="text-amber-600 dark:text-amber-400">
                   Missing:
                 </span>{' '}
-                <span className="text-slate-400">
+                <span className="text-slate-600 dark:text-slate-400">
                   {career.missingSkill}
                 </span>
               </div>
@@ -443,7 +443,7 @@ export default function CareerFitPanel({
               {/* Details */}
               <button
                 onClick={() => setSelectedCareer(career)}
-                className="border border-[#00d2ff] text-[#00d2ff] rounded-lg px-4 py-2 text-xs font-semibold hover:bg-[#00d2ff] hover:text-[#08101e] transition-all"
+                className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2 text-xs font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
               >
                 View details
               </button>

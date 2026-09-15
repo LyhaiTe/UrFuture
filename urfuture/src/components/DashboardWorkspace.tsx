@@ -21,9 +21,9 @@ export default function DashboardWorkspace({
   const displayName = studentName || 'Alex';
 
   return (
-    <div className="min-h-screen bg-[#070d1a] text-white">
+    <div className="dashboard-workspace min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50">
       {/* Welcome / Readiness Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0a2540] via-[#0d3a5c] to-[#0a2540] p-8 sm:p-10 mb-8 border border-[#1b3c66]/50">
+      <div className="dashboard-hero relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0a2540] via-[#0d3a5c] to-[#0a2540] p-8 sm:p-10 mb-8 border border-[#1b3c66]/50">
         {/* Subtle glow orbs */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-[#00d2ff]/8 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-1/3 w-60 h-60 bg-[#34d399]/5 rounded-full blur-3xl pointer-events-none" />
@@ -117,7 +117,6 @@ export default function DashboardWorkspace({
                   / 100
                 </span>
               </div>
-              <span className="mt-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Readiness</span>
             </div>
 
             <span className="mt-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -137,52 +136,52 @@ export default function DashboardWorkspace({
           {/* Quick Stats Row */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Knowledge Coverage */}
-            <div className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-5 hover:border-[#263b63] transition-colors">
-              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
+            <div className="bg-dark-card border border-dark-border rounded-xl p-6 shadow-sm hover:border-dark-borderLight transition-colors">
+              <span className="text-xs text-slate-800 dark:text-slate-300 font-semibold tracking-wider uppercase">
                 Knowledge Coverage
               </span>
 
               <div className="mt-2">
-                <span className="text-3xl font-extrabold text-white">
+                <span className="text-3xl font-bold text-slate-900 dark:text-white">
                   82%
                 </span>
               </div>
 
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-slate-700 dark:text-slate-200">
                 42 courses mapped
               </span>
             </div>
 
             {/* Career Match */}
-            <div className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-5 hover:border-[#263b63] transition-colors">
-              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
+            <div className="bg-dark-card border border-dark-border rounded-xl p-6 shadow-sm hover:border-dark-borderLight transition-colors">
+              <span className="text-xs text-slate-800 dark:text-slate-300 font-semibold tracking-wider uppercase">
                 Top Career Match
               </span>
 
               <div className="mt-2">
-                <span className="text-3xl font-extrabold text-white">
+                <span className="text-3xl font-bold text-slate-900 dark:text-white">
                   91%
                 </span>
               </div>
 
-              <span className="text-xs text-slate-300 font-medium">
+              <span className="text-xs text-slate-700 dark:text-slate-200 font-medium">
                 Data Engineer
               </span>
             </div>
 
             {/* Active Pathways */}
-            <div className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-5 hover:border-[#263b63] transition-colors">
-              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
+            <div className="bg-dark-card border border-dark-border rounded-xl p-6 shadow-sm hover:border-dark-borderLight transition-colors">
+              <span className="text-xs text-slate-800 dark:text-slate-300 font-semibold tracking-wider uppercase">
                 Active Pathways
               </span>
 
               <div className="mt-2">
-                <span className="text-3xl font-extrabold text-white">
+                <span className="text-3xl font-bold text-slate-900 dark:text-white">
                   3
                 </span>
               </div>
 
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-slate-700 dark:text-slate-200">
                 strong matches
               </span>
             </div>
@@ -193,7 +192,7 @@ export default function DashboardWorkspace({
             {/* Knowledge Mapping */}
             <div
               onClick={() => onNavigateTab('Knowledge map')}
-              className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-5 cursor-pointer hover:border-[#00d2ff]/40 hover:bg-[#111d33] transition-all group"
+              className="bg-dark-card border border-dark-border rounded-xl p-6 cursor-pointer shadow-sm hover:border-brand-cyan/40 hover:bg-dark-cardHover transition-all group"
             >
               <div className="flex items-start justify-between">
                 <div className="w-10 h-10 rounded-lg bg-[#0e2542] border border-[#1b3c66] flex items-center justify-center text-[#00d2ff]">
@@ -213,11 +212,11 @@ export default function DashboardWorkspace({
                 </div>
               </div>
 
-              <h3 className="text-base font-bold text-white mt-4 group-hover:text-[#00d2ff] transition-colors">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50 mt-4 group-hover:text-cyan-700 transition-colors">
                 Knowledge Mapping
               </h3>
 
-              <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+              <p className="text-xs text-slate-700 dark:text-slate-200 mt-1.5 leading-relaxed">
                 Turn coursework into verified competencies
               </p>
 
@@ -239,7 +238,7 @@ export default function DashboardWorkspace({
             {/* Career Paths */}
             <div
               onClick={() => onNavigateTab('Career paths')}
-              className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-5 cursor-pointer hover:border-[#00d2ff]/40 hover:bg-[#111d33] transition-all group relative"
+              className="bg-dark-card border border-dark-border rounded-xl p-6 cursor-pointer shadow-sm hover:border-brand-cyan/40 hover:bg-dark-cardHover transition-all group relative"
             >
               <div className="flex items-start justify-between">
                 <div className="w-10 h-10 rounded-lg bg-[#0e2542] border border-[#1b3c66] flex items-center justify-center text-[#00d2ff]">
@@ -263,11 +262,11 @@ export default function DashboardWorkspace({
                 </span>
               </div>
 
-              <h3 className="text-base font-bold text-white mt-4 group-hover:text-[#00d2ff] transition-colors">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50 mt-4 group-hover:text-cyan-700 transition-colors">
                 Career Paths
               </h3>
 
-              <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+              <p className="text-xs text-slate-700 dark:text-slate-200 mt-1.5 leading-relaxed">
                 Explore roles aligned with your strengths
               </p>
 
@@ -279,7 +278,7 @@ export default function DashboardWorkspace({
             {/* Job Fit Analysis */}
             <div
               onClick={() => onNavigateTab('Job fit')}
-              className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-5 cursor-pointer hover:border-[#00d2ff]/40 hover:bg-[#111d33] transition-all group"
+              className="bg-dark-card border border-dark-border rounded-xl p-6 cursor-pointer shadow-sm hover:border-brand-cyan/40 hover:bg-dark-cardHover transition-all group"
             >
               <div className="flex items-start justify-between">
                 <div className="w-10 h-10 rounded-lg bg-[#0e2542] border border-[#1b3c66] flex items-center justify-center text-[#00d2ff]">
@@ -299,11 +298,11 @@ export default function DashboardWorkspace({
                 </div>
               </div>
 
-              <h3 className="text-base font-bold text-white mt-4 group-hover:text-[#00d2ff] transition-colors">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50 mt-4 group-hover:text-cyan-700 transition-colors">
                 Job Fit Analysis
               </h3>
 
-              <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+              <p className="text-xs text-slate-700 dark:text-slate-200 mt-1.5 leading-relaxed">
                 Compare job descriptions with your skills
               </p>
 
@@ -315,7 +314,7 @@ export default function DashboardWorkspace({
             {/* Transcript Upload */}
             <div
               onClick={() => onNavigateTab('Knowledge map')}
-              className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-5 cursor-pointer hover:border-[#00d2ff]/40 hover:bg-[#111d33] transition-all group"
+              className="bg-dark-card border border-dark-border rounded-xl p-6 cursor-pointer shadow-sm hover:border-brand-cyan/40 hover:bg-dark-cardHover transition-all group"
             >
               <div className="flex items-start justify-between">
                 <div className="w-10 h-10 rounded-lg bg-[#0e2542] border border-[#1b3c66] flex items-center justify-center text-[#00d2ff]">
@@ -335,11 +334,11 @@ export default function DashboardWorkspace({
                 </div>
               </div>
 
-              <h3 className="text-base font-bold text-white mt-4 group-hover:text-[#00d2ff] transition-colors">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50 mt-4 group-hover:text-cyan-700 transition-colors">
                 Transcript Upload
               </h3>
 
-              <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+              <p className="text-xs text-slate-700 dark:text-slate-200 mt-1.5 leading-relaxed">
                 Add new transcripts to update your profile
               </p>
 
@@ -352,8 +351,8 @@ export default function DashboardWorkspace({
 
         {/* RIGHT SIDEBAR */}
         <div className="lg:col-span-4">
-          <div className="bg-[#0d1526] border border-[#1b2947] rounded-xl p-5 sticky top-6">
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider mb-4">
+          <div className="bg-dark-card border border-dark-border rounded-xl p-6 shadow-sm sticky top-6">
+            <h2 className="text-xs text-slate-800 dark:text-slate-300 font-semibold uppercase tracking-wider mb-4">
               Next Milestone
             </h2>
 
@@ -364,17 +363,17 @@ export default function DashboardWorkspace({
                 <span className="text-sm font-bold text-brand-emerald">75%</span>
               </div>
 
-            <h3 className="text-sm font-semibold text-white">
+            <h3 className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-50">
               Complete your career profile
             </h3>
 
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="mt-2 text-xs text-slate-700 dark:text-slate-200">
               Add two interests to sharpen your recommendations.
             </p>
 
               <button
                 onClick={() => onNavigateTab('Knowledge map')}
-                className="w-full py-2.5 px-4 rounded-xl bg-brand-cyan/10 hover:bg-brand-cyan/20 border border-brand-cyan/30 text-sm font-semibold text-brand-cyan transition-all hover:scale-105 active:scale-95"
+                className="mt-4 w-full py-2.5 px-4 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-600 border border-teal-600 text-sm font-semibold text-white transition-all hover:-translate-y-0.5 active:translate-y-0"
               >
                 Continue profile
               </button>
