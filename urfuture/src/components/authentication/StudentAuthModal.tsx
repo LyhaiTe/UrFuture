@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { AlertCircle, Globe, X } from 'lucide-react';
 import UrFutureLogo from 'src/components/UrFutureLogo';
 import { StudentUser } from '@/types';
 
@@ -34,11 +35,6 @@ const EDUCATION_LEVELS = [
   { value: 'GRADUATE', label: 'Graduate / Early Professional' },
 ];
 
-const ACADEMIC_TRACKS = [
-  { value: 'EXACT_SCIENCE', label: 'Exact Sciences (STEM: IT, Engineering, Math, Science)' },
-  { value: 'SOCIAL_SCIENCE', label: 'Social Sciences (Business, Humanities, Arts, Law, Education)' },
-];
-
 export default function StudentAuthModal({
   isOpen,
   onClose,
@@ -51,7 +47,6 @@ export default function StudentAuthModal({
   const [password, setPassword] = useState('');
   const [institution, setInstitution] = useState(INSTITUTIONS[0]);
   const [educationLevel, setEducationLevel] = useState(EDUCATION_LEVELS[2].value);
-  const [academicTrack, setAcademicTrack] = useState(ACADEMIC_TRACKS[0].value);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGoogleRedirecting, setIsGoogleRedirecting] = useState(false);
@@ -75,6 +70,17 @@ export default function StudentAuthModal({
       return;
     }
 
+    if (
+      mode === 'register' &&
+      !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/.test(password)
+    ) {
+      setError(
+        'Password must be at least 8 characters and include an uppercase letter, lowercase letter, number, and symbol'
+      );
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch('/api/auth/student', {
         method: 'POST',
@@ -82,10 +88,10 @@ export default function StudentAuthModal({
         body: JSON.stringify({
           action: mode,
           email,
+          password,
           name: mode === 'register' ? name : undefined,
           institution: mode === 'register' ? institution : undefined,
           educationLevel: mode === 'register' ? educationLevel : undefined,
-          academicTrack: mode === 'register' ? academicTrack : undefined,
         }),
       });
 
@@ -96,19 +102,8 @@ export default function StudentAuthModal({
       } else {
         setError(data.error || 'Authentication failed');
       }
-    } catch (err: any) {
-      // Offline fallback
-      const studentUser: StudentUser = {
-        id: `student-${Date.now().toString(36)}`,
-        name: name || email.split('@')[0] || 'Student',
-        email: email,
-        role: 'STUDENT',
-        institution: institution,
-        educationLevel: educationLevel,
-        academicTrack: academicTrack,
-      } as StudentUser;
-      onSuccess(studentUser);
-      onClose();
+    } catch {
+      setError('Unable to reach the authentication service. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -132,8 +127,9 @@ export default function StudentAuthModal({
             onClick={onClose}
             className="absolute right-4 top-4 w-8 h-8 rounded-lg bg-dark-surface text-slate-400 hover:text-brand-cyan hover:bg-brand-cyan/10 hover:border-brand-cyan/30 border border-transparent hover:shadow-sm transition-all duration-200"
             title="Close modal"
+            aria-label="Close modal"
           >
-            ✕
+            <X className="w-4 h-4 mx-auto" />
           </button>
         </div>
 
@@ -166,9 +162,7 @@ export default function StudentAuthModal({
 
           {error && (
             <div className="mb-5 p-3 rounded-xl bg-red-950/40 border border-red-800/50 text-red-300 text-xs flex items-start gap-3">
-              <svg className="w-4 h-4 shrink-0 text-red-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
@@ -242,22 +236,6 @@ export default function StudentAuthModal({
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Academic Track
-                  </label>
-                  <select
-                    value={academicTrack}
-                    onChange={(e) => setAcademicTrack(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-dark-surface border border-dark-border text-white text-sm focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan/20 transition-all"
-                  >
-                    {ACADEMIC_TRACKS.map((track) => (
-                      <option key={track.value} value={track.value} className="bg-dark-surface">
-                        {track.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </>
             )}
 
@@ -295,12 +273,7 @@ export default function StudentAuthModal({
                 {isGoogleRedirecting ? (
                   <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 48 48">
-                    <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
-                    <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z" />
-                    <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0124 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z" />
-                    <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 01-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z" />
-                  </svg>
+                  <Globe className="w-5 h-5 shrink-0" />
                 )}
                 <span>{isGoogleRedirecting ? 'Redirecting…' : 'Continue with Google'}</span>
               </button>

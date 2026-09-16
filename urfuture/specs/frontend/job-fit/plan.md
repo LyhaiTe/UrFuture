@@ -30,6 +30,13 @@ Validate study-plan weeks/resources, connect missing skills to the plan action, 
 
 **Exit**: job fit -> missing skills -> saved draft plan works end to end.
 
+### Completed integration repair
+
+- Normalized `/api/job/match` output to the panel's expected `result` shape.
+- Converted AI skill-name arrays into detailed UI skill-gap items.
+- Corrected the preparation request field to `targetSkillNames`.
+- Added clear errors for missing student accounts and provider failures.
+
 ### IDC-4: Human Review and Data Readiness
 
 Build counselor review queue/actions, version career data, add rate limits/cost controls, and replace seeded-only knowledge with a versioned ingestion boundary while preserving the citation contract.

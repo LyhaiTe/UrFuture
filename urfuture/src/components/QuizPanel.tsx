@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ClipboardCheck, RefreshCw } from 'lucide-react';
 
 interface QuizQuestion {
   id: string;
@@ -97,9 +98,7 @@ export default function QuizPanel({ userId, onQuizCompleted, onNavigateToCareers
             </>
           ) : (
             <>
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
+              <RefreshCw className="w-3.5 h-3.5" />
               {questions.length ? 'Regenerate Quiz' : 'Generate Quiz From Transcripts'}
             </>
           )}
@@ -115,9 +114,7 @@ export default function QuizPanel({ userId, onQuizCompleted, onNavigateToCareers
       {!questions.length && !error && !result && (
         <div className="rounded-xl border border-[#1b2b4c] bg-[#091120] p-8 text-center">
           <div className="w-12 h-12 rounded-2xl bg-[#0d1d36] border border-[#1b3c66] flex items-center justify-center text-[#00d2ff] mx-auto mb-3">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
+            <ClipboardCheck className="w-6 h-6" />
           </div>
           <h4 className="text-sm font-bold text-white">No active quiz attempt</h4>
           <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">

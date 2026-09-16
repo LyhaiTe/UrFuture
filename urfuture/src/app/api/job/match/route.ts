@@ -32,28 +32,66 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   const { userId, jobTitle, jobDescription } = parsed.data;
 
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+  if (!user) {
+    return NextResponse.json({ error: 'Student account not found. Please sign in again.' }, { status: 404 });
+  }
+
   const skills = await getStudentSkillContext(userId);
   const skillContext = formatStudentSkillsForPrompt(skills);
 
   const userMessage = `STUDENT SKILL PROFILE:\n${skillContext}\n\nJOB TITLE: ${jobTitle}\n\nJOB DESCRIPTION (pasted by student):\n${jobDescription}\n\nCall analyze_job_fit with your result. Extract required skills conservatively from the text above.`;
 
-  const result = await runToolCall<JobFitResult>({
-    system: `${BASE_SYSTEM_PROMPT}\n\n${JOB_FIT_FUNCTION_INSTRUCTIONS}`,
-    userMessage,
-    tool: ANALYZE_JOB_FIT_TOOL,
-  });
+  let result: JobFitResult;
+  try {
+    result = await runToolCall<JobFitResult>({
+      system: `${BASE_SYSTEM_PROMPT}\n\n${JOB_FIT_FUNCTION_INSTRUCTIONS}`,
+      userMessage,
+      tool: ANALYZE_JOB_FIT_TOOL,
+    });
+  } catch (error) {
+    console.error('Job fit analysis failed:', error);
+    return NextResponse.json(
+      { error: 'Job fit analysis is temporarily unavailable. Please try again.' },
+      { status: 502 }
+    );
+  }
+
+  const proficiencyBySkill = new Map(
+    skills.map((skill) => [skill.skill.name.toLowerCase(), skill.proficiency])
+  );
+  const toSkillGapItem = (skillName: string, matched: boolean) => {
+    const userProficiency = proficiencyBySkill.get(skillName.toLowerCase()) ?? 0;
+    const requiredImportance = 100;
+    return {
+      skillName,
+      userProficiency,
+      requiredImportance,
+      gap: matched ? 0 : Math.max(requiredImportance - userProficiency, 0),
+    };
+  };
+  const normalizedResult = {
+    jobTitle: result.jobTitle || jobTitle,
+    fitScore: Math.max(0, Math.min(100, result.fitScorePercent)),
+    matchedSkills: result.matchedSkills.map((skillName) => toSkillGapItem(skillName, true)),
+    missingSkills: result.missingSkills.map((skillName) => toSkillGapItem(skillName, false)),
+    explanation: result.summary,
+    citations: [],
+    requiresCounselorReview: false,
+    reviewReason: undefined,
+  };
 
   const saved = await prisma.jobFitCheck.create({
     data: {
       userId,
-      jobTitle: result.jobTitle,
+      jobTitle: normalizedResult.jobTitle,
       jobDescriptionRaw: jobDescription,
       extractedSkills: result.extractedSkills,
       matchedCount: result.matchedSkills.length,
       totalRequired: result.extractedSkills.length,
-      fitScorePercent: result.fitScorePercent,
+      fitScorePercent: normalizedResult.fitScore,
     },
   });
 
-  return NextResponse.json({ ...result, jobFitCheckId: saved.id });
+  return NextResponse.json({ result: normalizedResult, jobFitCheckId: saved.id });
 }

@@ -12,6 +12,10 @@ Help a student compare verified skills against a pasted job description or known
 ### US1 - Match a job description (P1)
 A student pastes a job description and receives a bounded fit score, extracted required skills, matched skills, missing skills, and an explanation.
 
+The client consumes the API response through its `result` property. The result
+uses the UI contract expected by `JobFitPanel`: `fitScore`, detailed matched and
+missing skill items, `explanation`, citations, and review state.
+
 ### US2 - Explore career pathways (P1)
 A student receives ranked career options based on current evidence and sees pathway steps, citations, and review status.
 
@@ -35,6 +39,10 @@ A student turns missing skills into a saved multi-week study plan.
 - Prevent duplicate review rows for the same recommendation.
 - Provide loading, no-skill, no-career, provider-failure, and retry states.
 - Label market salary/growth data as estimated unless backed by a verified source.
+- Send preparation requests using `targetSkillNames`, matching the study-plan
+  API contract.
+- Return a clear JSON error when the student account is missing or the AI
+  provider is unavailable.
 
 ## Success Criteria
 

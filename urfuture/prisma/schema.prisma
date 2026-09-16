@@ -72,241 +72,262 @@ enum SkillVerificationSource {
 }
 
 model User {
-  id String @id @default(cuid())
-  email String @unique
-  name String
-  passwordHash String?
-  authProvider AuthProvider @default(LOCAL)
-  googleId String? @unique
-  avatarUrl String?
-  role UserRole @default(STUDENT)
-  educationLevel EducationLevel?
-  institution String?
-  university String?
-  graduationYear Int?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  transcripts Transcript[]
-  skills UserSkill[]
-  conversations Conversation[]
-  careerPaths CareerRecommendation[]
-  studyPlans StudyPlan[]
-  quizAttempts QuizAttempt[]
-  jobFitChecks JobFitCheck[]
-  counselorReviews CounselorReview[] @relation("ReviewedStudent")
-  reviewsAuthored CounselorReview[] @relation("ReviewingCounselor")
+  id               String                 @id @default(cuid())
+  email            String                 @unique
+  name             String
+  passwordHash     String?
+  authProvider     AuthProvider           @default(LOCAL)
+  googleId         String?                @unique
+  avatarUrl        String?
+  role             UserRole               @default(STUDENT)
+  educationLevel   EducationLevel?
+  institution      String?
+  university       String?
+  graduationYear   Int?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  transcripts      Transcript[]
+  skills           UserSkill[]
+  conversations    Conversation[]
+  careerPaths      CareerRecommendation[]
+  studyPlans       StudyPlan[]
+  quizAttempts     QuizAttempt[]
+  jobFitChecks     JobFitCheck[]
+  selectedMajorId  String?
+  selectedMajor    CareerPath?            @relation("StudentMajor", fields: [selectedMajorId], references: [id], onDelete: SetNull)
+  counselorReviews CounselorReview[]      @relation("ReviewedStudent")
+  reviewsAuthored  CounselorReview[]      @relation("ReviewingCounselor")
+
   @@index([email])
   @@index([role])
 }
 
 model Transcript {
-  id String @id @default(cuid())
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fileName String
-  fileUrl String
-  storageProvider String @default("gcs")
+  id               String           @id @default(cuid())
+  userId           String
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileName         String
+  fileUrl          String
+  storageProvider  String           @default("gcs")
   storageObjectKey String
-  mimeType String
-  fileSizeBytes Int
-  yearLabel String?
-  status TranscriptStatus @default(UPLOADED)
-  rawText String? @db.Text
-  parsedCourses Json?
-  gpa Float?
-  uploadedAt DateTime @default(now())
-  parsedAt DateTime?
+  mimeType         String
+  fileSizeBytes    Int
+  yearLabel        String?
+  status           TranscriptStatus @default(UPLOADED)
+  rawText          String?          @db.Text
+  parsedCourses    Json?
+  gpa              Float?
+  uploadedAt       DateTime         @default(now())
+  parsedAt         DateTime?
+
   @@index([userId])
 }
 
 model Skill {
-  id String @id @default(cuid())
-  name String @unique
-  category String?
-  onetElementId String?
-  userSkills UserSkill[]
+  id              String                   @id @default(cuid())
+  name            String                   @unique
+  category        String?
+  onetElementId   String?
+  userSkills      UserSkill[]
   careerSkillReqs CareerSkillRequirement[]
-  quizQuestions QuizQuestion[]
+  quizQuestions   QuizQuestion[]
 }
 
 model UserSkill {
-  id String @id @default(cuid())
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  skillId String
-  skill Skill @relation(fields: [skillId], references: [id])
+  id          String                  @id @default(cuid())
+  userId      String
+  user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skillId     String
+  skill       Skill                   @relation(fields: [skillId], references: [id])
   proficiency Float
-  source SkillVerificationSource
-  lastUpdated DateTime @updatedAt
+  source      SkillVerificationSource
+  lastUpdated DateTime                @updatedAt
+
   @@unique([userId, skillId, source])
   @@index([userId])
   @@index([skillId])
 }
 
 model CareerPath {
-  id String @id @default(cuid())
-  title String @unique
-  industry String?
-  onetSocCode String?
-  descriptionShort String
-  description String? @db.Text
-  salaryMinUsd Float?
-  salaryMaxUsd Float?
-  medianSalaryUsd Float?
-  growthOutlook String?
-  sourceNote String @db.Text
+  id                String                   @id @default(cuid())
+  title             String                   @unique
+  industry          String?
+  onetSocCode       String?
+  descriptionShort  String
+  description       String?                  @db.Text
+  salaryMinUsd      Float?
+  salaryMaxUsd      Float?
+  medianSalaryUsd   Float?
+  growthOutlook     String?
+  sourceNote        String                   @db.Text
   requiredEducation EducationLevel?
   skillRequirements CareerSkillRequirement[]
-  recommendations CareerRecommendation[]
-  pathwaySteps PathwayStep[]
+  recommendations   CareerRecommendation[]
+  pathwaySteps      PathwayStep[]
+  students          User[]                   @relation("StudentMajor")
+  quizQuestions     QuizQuestion[]
+  quizAttempts      QuizAttempt[]
 }
 
 model CareerSkillRequirement {
-  id String @id @default(cuid())
+  id           String     @id @default(cuid())
   careerPathId String
-  careerPath CareerPath @relation(fields: [careerPathId], references: [id], onDelete: Cascade)
-  skillId String
-  skill Skill @relation(fields: [skillId], references: [id])
-  importance Float
+  careerPath   CareerPath @relation(fields: [careerPathId], references: [id], onDelete: Cascade)
+  skillId      String
+  skill        Skill      @relation(fields: [skillId], references: [id])
+  importance   Float
+
   @@unique([careerPathId, skillId])
   @@index([skillId])
 }
 
 model PathwayStep {
-  id String @id @default(cuid())
-  careerPathId String
-  careerPath CareerPath @relation(fields: [careerPathId], references: [id], onDelete: Cascade)
-  type PathwayStepType
-  label String
-  description String? @db.Text
-  order Int
-  metadata Json?
-  requiredCourses Json?
-  certifications Json?
-  internshipRequirements String? @db.Text
+  id                     String          @id @default(cuid())
+  careerPathId           String
+  careerPath             CareerPath      @relation(fields: [careerPathId], references: [id], onDelete: Cascade)
+  type                   PathwayStepType
+  label                  String
+  description            String?         @db.Text
+  order                  Int
+  metadata               Json?
+  requiredCourses        Json?
+  certifications         Json?
+  internshipRequirements String?         @db.Text
+
   @@unique([careerPathId, order])
 }
 
 model CareerRecommendation {
-  id String @id @default(cuid())
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  careerPathId String
-  careerPath CareerPath @relation(fields: [careerPathId], references: [id])
-  fitScore Float
-  matchedSkills Json
-  missingSkills Json
-  rationale String @db.Text
-  citations Json
-  requiresReview Boolean @default(false)
-  reviewStatus ReviewStatus @default(PENDING)
-  counselorNotes String? @db.Text
-  createdAt DateTime @default(now())
+  id              String           @id @default(cuid())
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  careerPathId    String
+  careerPath      CareerPath       @relation(fields: [careerPathId], references: [id])
+  fitScore        Float
+  matchedSkills   Json
+  missingSkills   Json
+  rationale       String           @db.Text
+  citations       Json
+  requiresReview  Boolean          @default(false)
+  reviewStatus    ReviewStatus     @default(PENDING)
+  counselorNotes  String?          @db.Text
+  createdAt       DateTime         @default(now())
   counselorReview CounselorReview?
 }
 
 model StudyPlan {
-  id String @id @default(cuid())
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title String
+  id                String          @id @default(cuid())
+  userId            String
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title             String
   generatedSchedule Json?
-  weeklyModules Json?
-  targetSkillIds Json
-  weeks Json
-  status StudyPlanStatus @default(DRAFT)
-  citations Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  weeklyModules     Json?
+  targetSkillIds    Json
+  weeks             Json
+  status            StudyPlanStatus @default(DRAFT)
+  citations         Json
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 }
 
 model QuizQuestion {
-  id String @id @default(cuid())
-  skillId String
-  skill Skill @relation(fields: [skillId], references: [id])
-  courseCode String?
-  prompt String @db.Text
-  choices Json
+  id           String       @id @default(cuid())
+  careerPathId String?
+  careerPath   CareerPath?  @relation(fields: [careerPathId], references: [id], onDelete: Cascade)
+  skillId      String
+  skill        Skill        @relation(fields: [skillId], references: [id])
+  courseCode   String?
+  prompt       String       @db.Text
+  choices      Json
   correctIndex Int
-  difficulty String
+  difficulty   String
   sourceCourse String?
-  answers QuizAnswer[]
+  answers      QuizAnswer[]
+
+  @@index([careerPathId])
 }
 
 model QuizAttempt {
-  id String @id @default(cuid())
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String       @id @default(cuid())
+  userId               String
+  user                 User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  careerPathId         String?
+  careerPath           CareerPath?  @relation(fields: [careerPathId], references: [id], onDelete: SetNull)
   basedOnTranscriptIds Json
-  scorePercent Float?
-  startedAt DateTime @default(now())
-  completedAt DateTime?
-  answers QuizAnswer[]
+  scorePercent         Float?
+  startedAt            DateTime     @default(now())
+  completedAt          DateTime?
+  answers              QuizAnswer[]
+
+  @@index([careerPathId])
 }
 
 model QuizAnswer {
-  id String @id @default(cuid())
+  id            String       @id @default(cuid())
   quizAttemptId String
-  quizAttempt QuizAttempt @relation(fields: [quizAttemptId], references: [id], onDelete: Cascade)
-  questionId String
-  question QuizQuestion @relation(fields: [questionId], references: [id])
+  quizAttempt   QuizAttempt  @relation(fields: [quizAttemptId], references: [id], onDelete: Cascade)
+  questionId    String
+  question      QuizQuestion @relation(fields: [questionId], references: [id])
   selectedIndex Int
   studentAnswer String?
-  isCorrect Boolean
-  skillUpdate Float?
+  isCorrect     Boolean
+  skillUpdate   Float?
+
   @@index([quizAttemptId])
 }
 
 model JobFitCheck {
-  id String @id @default(cuid())
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobTitle String
-  jobDescriptionRaw String @db.Text
-  extractedSkills Json
-  matchedCount Int
-  totalRequired Int
-  fitScorePercent Float
-  gapClosingPlanId String?
-  createdAt DateTime @default(now())
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobTitle          String
+  jobDescriptionRaw String   @db.Text
+  extractedSkills   Json
+  matchedCount      Int
+  totalRequired     Int
+  fitScorePercent   Float
+  gapClosingPlanId  String?
+  createdAt         DateTime @default(now())
 }
 
 model CounselorReview {
-  id String @id @default(cuid())
-  studentId String
-  student User @relation("ReviewedStudent", fields: [studentId], references: [id], onDelete: Cascade)
-  counselorId String?
-  counselor User? @relation("ReviewingCounselor", fields: [counselorId], references: [id])
-  careerRecommendationId String? @unique
-  careerRecommendation CareerRecommendation? @relation(fields: [careerRecommendationId], references: [id])
-  reason String
-  status ReviewStatus @default(PENDING)
-  counselorNotes String? @db.Text
-  createdAt DateTime @default(now())
-  resolvedAt DateTime?
+  id                     String                @id @default(cuid())
+  studentId              String
+  student                User                  @relation("ReviewedStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  counselorId            String?
+  counselor              User?                 @relation("ReviewingCounselor", fields: [counselorId], references: [id])
+  careerRecommendationId String?               @unique
+  careerRecommendation   CareerRecommendation? @relation(fields: [careerRecommendationId], references: [id])
+  reason                 String
+  status                 ReviewStatus          @default(PENDING)
+  counselorNotes         String?               @db.Text
+  createdAt              DateTime              @default(now())
+  resolvedAt             DateTime?
+
   @@index([studentId])
   @@index([status])
   @@index([counselorId])
 }
 
 model Conversation {
-  id String @id @default(cuid())
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  messages Message[]
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  messages  Message[]
 }
 
 model Message {
-  id String @id @default(cuid())
+  id             String       @id @default(cuid())
   conversationId String
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  role MessageRole
-  content String @db.Text
-  toolCalls Json?
-  citations Json?
-  createdAt DateTime @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           MessageRole
+  content        String       @db.Text
+  toolCalls      Json?
+  citations      Json?
+  createdAt      DateTime     @default(now())
+
   @@index([conversationId])
 }

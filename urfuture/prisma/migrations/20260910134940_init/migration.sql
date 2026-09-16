@@ -278,7 +278,7 @@ CREATE INDEX "CounselorReview_status_idx" ON "CounselorReview"("status");
 CREATE INDEX "Message_conversationId_idx" ON "Message"("conversationId");
 
 --CreateIndex
-CREATE UNIQUE INDEX "User_googleId_key" ON "User"("googleId")
+CREATE UNIQUE INDEX "User_googleId_key" ON "User"("googleId");
 
 -- AddForeignKey
 ALTER TABLE "Transcript" ADD CONSTRAINT "Transcript_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
