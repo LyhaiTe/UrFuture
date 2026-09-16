@@ -1,456 +1,167 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import SearchFilterBar from '@/components/career/SearchFilterBar';
+import CareerDetailModal from '@/components/career/CareerDetailModal';
+import { CAREER_BY_SLUG, CAREER_CATALOG } from '@/data/careerCatalog';
+import { CATEGORY_BY_ID } from '@/data/careerCategories';
+import {
+  activeFilterCount,
+  applyCareerFilters,
+  categoryOf,
+  EMPTY_FILTER_STATE,
+  toggleFilterValue,
+  type CareerFilterState,
+} from '@/lib/careerFilters';
+import type { Career } from '@/types/career';
 
-interface Career {
-  id: number;
-  title: string;
-  matchScore: number;
-  fitLabel: string;
-  missingSkill: string;
-  rationale: string;
-  matchedSkills: string[];
-  skillsToStrengthen: string[];
-  nextSteps: {
-    title: string;
-    priority: 'High priority' | 'Medium priority';
-    description: string;
-  }[];
+/**
+ * Career Paths panel.
+ *
+ * The career list and the Cambodia market data moved out of this file into
+ * src/data/. This component now only owns UI state: the search query, the
+ * filter selections, and which career (if any) is open in the detail modal.
+ */
+interface CareerFitPanelProps {
+  readonly userId: string;
 }
 
-const careers: Career[] = [
-  {
-    id: 1,
-    title: 'Software Engineer',
-    matchScore: 91,
-    fitLabel: 'Strong fit',
-    missingSkill: 'cloud deployment',
-    rationale:
-      'Your programming, data structures, databases, and software security coursework align strongly with the role. Your quiz also showed strong algorithmic reasoning.',
-    matchedSkills: [
-      'Programming fundamentals',
-      'Data structures & algorithms',
-      'SQL & database design',
-      'Software security basics',
-      'Version control',
-    ],
-    skillsToStrengthen: [
-      'Cloud deployment',
-      'Automated testing',
-      'System design at scale',
-      'Production observability',
-    ],
-    nextSteps: [
-      {
-        title: 'Cloud Fundamentals',
-        priority: 'High priority',
-        description: 'Build deployment confidence',
-      },
-      {
-        title: 'Software Testing',
-        priority: 'High priority',
-        description: 'Close automation gap',
-      },
-      {
-        title: 'System Design Practice',
-        priority: 'Medium priority',
-        description: 'Prepare for technical interviews',
-      },
-    ],
-  },
+export default function CareerFitPanel({ userId: _userId }: CareerFitPanelProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState<CareerFilterState>(EMPTY_FILTER_STATE);
+  const [openSlug, setOpenSlug] = useState<string | null>(null);
 
-  {
-    id: 2,
-    title: 'Data Analyst',
-    matchScore: 86,
-    fitLabel: 'Strong fit',
-    missingSkill: 'dashboard portfolio',
-    rationale:
-      'Your database, analytical reasoning, and data-focused coursework provide a strong foundation for data analysis roles.',
-    matchedSkills: [
-      'SQL',
-      'Database systems',
-      'Data modeling',
-      'Analytical reasoning',
-      'Programming fundamentals',
-    ],
-    skillsToStrengthen: [
-      'Dashboard portfolio',
-      'Data visualization',
-      'Advanced spreadsheet analysis',
-      'Business reporting',
-    ],
-    nextSteps: [
-      {
-        title: 'Dashboard Portfolio',
-        priority: 'High priority',
-        description: 'Create practical visualization projects',
-      },
-      {
-        title: 'Data Visualization',
-        priority: 'High priority',
-        description: 'Improve communication of data insights',
-      },
-      {
-        title: 'Business Analytics',
-        priority: 'Medium priority',
-        description: 'Strengthen business-focused analysis',
-      },
-    ],
-  },
+  const visibleCareers = useMemo(
+    () => applyCareerFilters(CAREER_CATALOG, searchQuery, filters),
+    [searchQuery, filters]
+  );
 
-  {
-    id: 3,
-    title: 'Cybersecurity Analyst',
-    matchScore: 82,
-    fitLabel: 'Good fit',
-    missingSkill: 'network forensics',
-    rationale:
-      'Your software security and systems coursework provides a useful foundation for cybersecurity analysis.',
-    matchedSkills: [
-      'Software security basics',
-      'Programming fundamentals',
-      'Database systems',
-      'System fundamentals',
-      'Problem solving',
-    ],
-    skillsToStrengthen: [
-      'Network forensics',
-      'Incident response',
-      'Security monitoring',
-      'Threat analysis',
-    ],
-    nextSteps: [
-      {
-        title: 'Network Security',
-        priority: 'High priority',
-        description: 'Build practical networking security skills',
-      },
-      {
-        title: 'Security Labs',
-        priority: 'High priority',
-        description: 'Practice identifying security threats',
-      },
-      {
-        title: 'Incident Response',
-        priority: 'Medium priority',
-        description: 'Learn structured response procedures',
-      },
-    ],
-  },
+  const filterCount = activeFilterCount(filters);
 
-  {
-    id: 4,
-    title: 'QA Automation Engineer',
-    matchScore: 78,
-    fitLabel: 'Good fit',
-    missingSkill: 'test automation framework',
-    rationale:
-      'Your programming and software engineering background gives you a solid starting point for software quality and automation work.',
-    matchedSkills: [
-      'Programming fundamentals',
-      'Software engineering',
-      'Version control',
-      'Problem solving',
-      'Software security basics',
-    ],
-    skillsToStrengthen: [
-      'Test automation framework',
-      'Integration testing',
-      'End-to-end testing',
-      'CI/CD testing',
-    ],
-    nextSteps: [
-      {
-        title: 'Automated Testing',
-        priority: 'High priority',
-        description: 'Learn a modern testing framework',
-      },
-      {
-        title: 'Testing Project',
-        priority: 'High priority',
-        description: 'Build an automated testing project',
-      },
-      {
-        title: 'CI/CD Basics',
-        priority: 'Medium priority',
-        description: 'Connect automated tests to deployment',
-      },
-    ],
-  },
-
-  {
-    id: 5,
-    title: 'Business Systems Analyst',
-    matchScore: 73,
-    fitLabel: 'Possible fit',
-    missingSkill: 'requirements facilitation',
-    rationale:
-      'Your technical background and understanding of software systems could transfer well into systems analysis roles.',
-    matchedSkills: [
-      'System analysis',
-      'Database systems',
-      'Software engineering',
-      'Problem solving',
-      'Technical documentation',
-    ],
-    skillsToStrengthen: [
-      'Requirements facilitation',
-      'Stakeholder communication',
-      'Business process modeling',
-      'Requirements documentation',
-    ],
-    nextSteps: [
-      {
-        title: 'Requirements Analysis',
-        priority: 'High priority',
-        description: 'Practice gathering system requirements',
-      },
-      {
-        title: 'Business Process Modeling',
-        priority: 'High priority',
-        description: 'Model real organizational workflows',
-      },
-      {
-        title: 'Communication Practice',
-        priority: 'Medium priority',
-        description: 'Improve stakeholder communication',
-      },
-    ],
-  },
-];
-
-export default function CareerFitPanel({
-  userId,
-}: {
-  userId: string;
-}) {
-  const [selectedCareer, setSelectedCareer] =
-    useState<Career | null>(null);
-
-  // Keeps the prop ready for backend integration later.
-  void userId;
-
-  /* ================================
-     CAREER DETAIL PAGE
-  ================================= */
-
-  if (selectedCareer) {
-    return (
-      <div className="flex flex-col gap-6">
-        {/* Breadcrumb */}
-        <button
-          onClick={() => setSelectedCareer(null)}
-          className="self-start text-xs text-slate-500 hover:text-[#00d2ff] transition-colors"
-        >
-          Career paths / {selectedCareer.title}
-        </button>
-
-        {/* Career Heading */}
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50">
-            {selectedCareer.title}
-          </h1>
-
-          <p className="mt-2 text-sm">
-            <span className="text-[#34d399] font-bold">
-              {selectedCareer.matchScore}% profile match
-            </span>
-
-            <span className="text-slate-500">
-              {' '}
-              · {selectedCareer.fitLabel}
-            </span>
-          </p>
-        </div>
-
-        {/* Why This Fits */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 mb-3">
-            Why this fits you
-          </h2>
-
-          <p className="text-sm text-slate-600 dark:text-slate-400 leading-6">
-            {selectedCareer.rationale}
-          </p>
-
-          <p className="text-xs text-slate-500 mt-4">
-            This is guidance, not a final academic or career decision.
-          </p>
-        </div>
-
-        {/* Skills */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Matched Skills */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 mb-5">
-              Matched skills
-            </h2>
-
-            <div className="space-y-3">
-              {selectedCareer.matchedSkills.map((skill) => (
-                <div
-                  key={skill}
-                  className="flex items-center gap-2 text-sm text-[#34d399]"
-                >
-                  <span>✓</span>
-                  <span>{skill}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Skills To Strengthen */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 mb-5">
-              Skills to strengthen
-            </h2>
-
-            <div className="space-y-3">
-              {selectedCareer.skillsToStrengthen.map(
-                (skill, index) => (
-                  <div
-                    key={skill}
-                    className="flex gap-3 text-sm text-amber-400"
-                  >
-                    <span>{index + 1}.</span>
-                    <span>{skill}</span>
-                  </div>
-                )
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Recommended Next Steps */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 mb-6">
-            Recommended next steps
-          </h2>
-
-          <div className="space-y-3">
-            {selectedCareer.nextSteps.map((step) => (
-              <div
-                key={step.title}
-                className="grid grid-cols-1 md:grid-cols-[220px_150px_1fr] gap-3 md:items-center py-3 border-b border-[#1b2947] last:border-b-0"
-              >
-                <span className="text-sm text-slate-900 dark:text-slate-100 font-medium">
-                  {step.title}
-                </span>
-
-                <span
-                  className={`text-xs font-medium ${
-                    step.priority === 'High priority'
-                      ? 'text-[#00d2ff]'
-                      : 'text-[#34d399]'
-                  }`}
-                >
-                  {step.priority}
-                </span>
-
-                <span className="text-xs text-slate-600 dark:text-slate-400">
-                  {step.description}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Back */}
-        <button
-          onClick={() => setSelectedCareer(null)}
-          className="self-start px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 text-xs text-slate-900 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
-        >
-          ← Back to career paths
-        </button>
-      </div>
-    );
-  }
-
-  /* ================================
-     CAREER PATHS PAGE
-  ================================= */
+  const openCareer: Career | null = openSlug
+    ? CAREER_BY_SLUG.get(openSlug) ?? null
+    : null;
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Heading */}
       <div>
-        <p className="text-xs text-slate-500 mb-3">
-          Workspace / Career paths
-        </p>
+        <p className="text-xs text-slate-500 mb-3">Workspace / Career paths</p>
 
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">
           Career paths that match your profile
         </h1>
 
         <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
-          Ranked from your coursework, quiz results, interests,
-          and transferable skills.
+          Ranked from your coursework, quiz results, interests, and
+          transferable skills.
         </p>
       </div>
 
-      {/* Strongest Fit */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
           Strongest fit: Software &amp; Data
         </h2>
 
         <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
-          Your top matches share programming, analytical reasoning,
-          and systems thinking.
+          Your top matches share programming, analytical reasoning, and systems
+          thinking.
         </p>
       </div>
 
-      {/* Career List */}
-      <div className="flex flex-col gap-3">
-        {careers.map((career, index) => (
-          <div
-            key={career.id}
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl p-5 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+      <SearchFilterBar
+        query={searchQuery}
+        filters={filters}
+        activeFilterCount={filterCount}
+        resultCount={visibleCareers.length}
+        totalCount={CAREER_CATALOG.length}
+        onQueryChange={setSearchQuery}
+        onClearQuery={() => setSearchQuery('')}
+        onToggleCategory={(id) =>
+          setFilters((current) => toggleFilterValue(current, 'categories', id))
+        }
+        onToggleFitLevel={(level) =>
+          setFilters((current) => toggleFilterValue(current, 'fitLevels', level))
+        }
+        onToggleDemandLevel={(level) =>
+          setFilters((current) => toggleFilterValue(current, 'demandLevels', level))
+        }
+        onClearFilters={() => setFilters(EMPTY_FILTER_STATE)}
+      />
+
+      {visibleCareers.length === 0 ? (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 text-center">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            {searchQuery
+              ? `No career paths match "${searchQuery}".`
+              : 'No career paths match the selected filters.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setSearchQuery('');
+              setFilters(EMPTY_FILTER_STATE);
+            }}
+            className="mt-3 text-xs font-medium text-[#00d2ff] hover:underline"
           >
-            <div className="grid grid-cols-1 lg:grid-cols-[50px_1fr_260px_80px_120px] gap-4 lg:items-center">
-              {/* Ranking */}
-              <div className="text-[#00d2ff] text-xs font-bold">
-                #{index + 1}
+            Clear search and filters
+          </button>
+        </div>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {visibleCareers.map((career, index) => (
+            <li
+              key={career.id}
+              /* Keyed animation: re-mounting on a filter change replays the
+                 entrance, so the list reads as "these are the new results"
+                 rather than silently swapping content. */
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl p-5 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors animate-fade-in-up motion-reduce:animate-none"
+              style={{ animationDelay: `${Math.min(index, 8) * 35}ms` }}
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-[50px_1fr_240px_80px_120px] gap-4 lg:items-center">
+                <div className="text-[#00d2ff] text-xs font-bold">#{index + 1}</div>
+
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    {career.title}
+                  </h3>
+
+                  <p className="text-xs text-slate-500 mt-1">
+                    {career.fitLabel} · {CATEGORY_BY_ID[categoryOf(career)].label}
+                  </p>
+                </div>
+
+                <div className="text-xs">
+                  <span className="text-amber-600 dark:text-amber-400">Missing:</span>{' '}
+                  <span className="text-slate-600 dark:text-slate-400">
+                    {career.missingSkill}
+                  </span>
+                </div>
+
+                <div className="text-xl font-bold text-[#34d399]">
+                  {career.matchScore}%
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setOpenSlug(career.slug)}
+                  aria-haspopup="dialog"
+                  className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2 text-xs font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00d2ff]"
+                >
+                  View details
+                </button>
               </div>
+            </li>
+          ))}
+        </ul>
+      )}
 
-              {/* Career */}
-              <div>
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  {career.title}
-                </h3>
-
-                <p className="text-xs text-slate-500 mt-1">
-                  {career.fitLabel}
-                </p>
-              </div>
-
-              {/* Missing */}
-              <div className="text-xs">
-                <span className="text-amber-600 dark:text-amber-400">
-                  Missing:
-                </span>{' '}
-                <span className="text-slate-600 dark:text-slate-400">
-                  {career.missingSkill}
-                </span>
-              </div>
-
-              {/* Score */}
-              <div className="text-xl font-bold text-[#34d399]">
-                {career.matchScore}%
-              </div>
-
-              {/* Details */}
-              <button
-                onClick={() => setSelectedCareer(career)}
-                className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-2 text-xs font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
-              >
-                View details
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+      {openCareer && (
+        <CareerDetailModal
+          career={openCareer}
+          onClose={() => setOpenSlug(null)}
+          onSelectCareer={(slug) => setOpenSlug(slug)}
+        />
+      )}
     </div>
   );
 }
