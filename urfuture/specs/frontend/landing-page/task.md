@@ -98,7 +98,12 @@
   * Full Name
   * Institution
   * Academic Level
-  * Academic Track
+
+* Enforce registration passwords with at least 8 characters, including an
+  uppercase letter, lowercase letter, number, and symbol.
+* Require registration before email/password sign-in.
+* Display API errors for unknown accounts and invalid passwords.
+* Remove the Academic Track field.
 
 * Add the **Continue with Google** button.
 
@@ -130,7 +135,7 @@
   * Handle registration API requests.
   * Handle loading states.
   * Handle API errors.
-  * Support offline fallback states where required.
+  * Do not auto-login through an offline fallback.
 
 * Implement Google OAuth integration.
 
@@ -171,6 +176,12 @@
 * Check color contrast for all text and interactive elements against the dark background.
 
 * Test authentication validation and error states.
+
+* Verify that a new student can register successfully.
+* Verify that an existing student can sign in on a later visit.
+* Verify that an unregistered email cannot sign in.
+* Verify that an incorrect password cannot sign in.
+* Verify that registration rejects an existing email.
 
 * Verify the authentication modal:
 

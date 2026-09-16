@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { TrendingUp } from 'lucide-react';
 import ReactFlow, {
   Background,
   Controls,
@@ -77,9 +78,7 @@ export default function PathwayGraph({
     return (
       <div className="card-dark p-6 flex flex-col items-center justify-center h-72 text-center border-[#1b2947] bg-[#0c1426]">
         <div className="w-10 h-10 rounded-xl bg-[#0d1e38] border border-[#1b3c66] flex items-center justify-center text-[#00d2ff] mb-2">
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-          </svg>
+          <TrendingUp className="w-5 h-5" />
         </div>
         <h4 className="text-xs font-bold text-white">Career Progression Graph</h4>
         <p className="text-[11px] text-slate-400 mt-1 max-w-xs">

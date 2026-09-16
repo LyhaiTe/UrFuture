@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState, useEffect } from 'react';
+import { ArrowRight, Bot, MessageSquareText, Sparkles, X } from 'lucide-react';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -149,15 +150,7 @@ export default function ChatPanel({ userId, isModal = false, onClose }: ChatPane
         <div className="flex items-center gap-3">
           {/* Robot icon matching the floating button */}
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#00d2ff] to-[#0099cc] flex items-center justify-center shadow-md shadow-[#00d2ff]/30">
-            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <rect x="5" y="8" width="14" height="10" rx="2" strokeWidth={2} />
-              <circle cx="9" cy="12" r="1.5" fill="currentColor" />
-              <circle cx="15" cy="12" r="1.5" fill="currentColor" />
-              <path strokeLinecap="round" strokeWidth={2} d="M9 15c1.5 1 4.5 1 6 0" />
-              <path strokeLinecap="round" strokeWidth={2} d="M12 8V5" />
-              <circle cx="12" cy="4" r="1" fill="currentColor" />
-              <path strokeLinecap="round" strokeWidth={2} d="M5 12H3M19 12h2" />
-            </svg>
+            <Bot className="w-5 h-5 text-white" strokeWidth={2} />
           </div>
           <div>
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
@@ -182,9 +175,7 @@ export default function ChatPanel({ userId, isModal = false, onClose }: ChatPane
             className="chat-close-button w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all hover:scale-105"
             aria-label="Close chat"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="w-4 h-4" strokeWidth={2.5} />
           </button>
         )}
       </div>
@@ -240,7 +231,8 @@ export default function ChatPanel({ userId, isModal = false, onClose }: ChatPane
       {/* ========================================================================= */}
       {showSuggestions && messages.length <= 2 && (
         <div className="px-5 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80">
-          <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-2">
+          <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-2 flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5" />
             Try asking
           </span>
           <div className="flex flex-wrap gap-1.5">
@@ -279,9 +271,7 @@ export default function ChatPanel({ userId, isModal = false, onClose }: ChatPane
             {streaming ? (
               <span className="w-4 h-4 border-2 border-[#080d1a] border-t-transparent rounded-full animate-spin" />
             ) : (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
+              <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
             )}
             Send
           </button>

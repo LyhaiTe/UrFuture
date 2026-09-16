@@ -291,12 +291,12 @@ export default function KnowledgeMapPanel({
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#34d399]" />
 
-            <h3 className="text-sm font-semibold text-slate-900">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
               Upload Coursework Transcripts
             </h3>
           </div>
 
-          <p className="text-[11px] text-slate-600 mt-1">
+          <p className="text-[11px] text-slate-700 dark:text-slate-300 mt-1">
             Add your coursework transcript before generating
             a diagnostic quiz.
           </p>

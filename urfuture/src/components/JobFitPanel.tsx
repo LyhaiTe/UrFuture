@@ -1,5 +1,6 @@
 'use client';
 
+import { ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 
 interface SkillGapItem {
@@ -155,7 +156,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
         body: JSON.stringify({
           userId,
           jobTitle: result.jobTitle,
-          missingSkills: result.missingSkills,
+          targetSkillNames: result.missingSkills.map((skill) => skill.skillName),
         }),
       });
 
@@ -203,7 +204,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
       {/* JOB DESCRIPTION INPUT */}
       {/* ================================================= */}
 
-      <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6">
+      <section className="bg-[#071827] border border-[#1b2d45] rounded-xl p-6 shadow-[0_0_0_1px_rgba(27,45,69,0.4)]">
 
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
 
@@ -211,18 +212,18 @@ export default function JobFitPanel({ userId }: { userId: string }) {
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#00d2ff]" />
 
-              <h2 className="text-lg font-semibold text-slate-900">
+              <h2 className="text-lg font-semibold text-slate-50">
                 Job Description Fit-Check & Gap Assessment
               </h2>
             </div>
 
-            <p className="text-xs text-slate-600 mt-2">
+            <p className="text-xs text-slate-300 mt-2">
               Compare a job posting against your verified knowledge map
               and identify your strongest and missing skills.
             </p>
           </div>
 
-          <span className="self-start px-3 py-1.5 rounded-full bg-[#00d2ff]/10 border border-[#00d2ff]/30 text-[10px] font-bold text-[#00d2ff]">
+          <span className="self-start px-3 py-1.5 rounded-full bg-[#0d2238] border border-[#1f3d5c] text-[10px] font-bold text-[#00d2ff]">
             Semantic Matcher
           </span>
 
@@ -232,7 +233,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
 
         <div className="flex flex-wrap items-center gap-2 mt-5">
 
-          <span className="text-[11px] text-slate-500">
+          <span className="text-[11px] text-slate-300">
             Try a sample:
           </span>
 
@@ -244,7 +245,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
                 'We are looking for a Junior Software Engineer named NUT SANNARA with knowledge of programming fundamentals, data structures, algorithms, SQL, database design, Git, automated testing, cloud deployment, and software development best practices.'
               )
             }
-            className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 hover:border-cyan-500 hover:text-cyan-700 transition"
+            className="px-3 py-1.5 rounded-lg border border-slate-600 bg-[#0f2137] text-xs text-slate-100 hover:border-cyan-500 hover:text-cyan-300 transition"
           >
             Junior Software Engineer
           </button>
@@ -257,7 +258,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
                 'Seeking a Data and Business Analyst with skills in SQL, database systems, data analysis, dashboards, business intelligence, communication, reporting, Excel, and analytical problem solving.'
               )
             }
-            className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs text-slate-800 hover:border-cyan-500 hover:text-cyan-700 transition"
+            className="px-3 py-1.5 rounded-lg border border-slate-600 bg-[#0f2137] text-xs text-slate-100 hover:border-cyan-500 hover:text-cyan-300 transition"
           >
             Data & Business Analyst
           </button>
@@ -268,7 +269,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
 
         <div className="mt-4">
 
-          <label className="text-[10px] uppercase tracking-wider font-bold text-slate-500">
+          <label className="text-[10px] uppercase tracking-wider font-bold text-slate-300">
             Job Title
           </label>
 
@@ -288,7 +289,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
                 setStudyPlan([]);
                 setError(null);
               }}
-              className="w-full appearance-none bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 pr-10 text-sm text-slate-800 dark:text-slate-100 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:focus:ring-cyan-900/40 transition cursor-pointer"
+              className="w-full appearance-none bg-[#081a2d] border border-[#314d69] rounded-xl px-4 py-3 pr-10 text-sm text-slate-100 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-900/40 transition cursor-pointer"
             >
               {JOB_TITLES.map((title) => (
                 <option
@@ -304,19 +305,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
 
             {/* Custom dropdown arrow */}
             <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2">
-              <svg
-                className="w-4 h-4 text-slate-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
+              <ChevronDown className="w-4 h-4 text-slate-400" />
             </div>
           </div>
 
@@ -347,7 +336,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
 
         <div className="mt-4">
 
-          <label className="text-[10px] uppercase tracking-wider font-bold text-slate-500">
+          <label className="text-[10px] uppercase tracking-wider font-bold text-slate-300">
             Job Description / Requirements
           </label>
 
@@ -361,14 +350,14 @@ export default function JobFitPanel({ userId }: { userId: string }) {
             }}
             placeholder="Paste the job description or role requirements here..."
             rows={6}
-            className="mt-2 w-full resize-none bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:focus:ring-cyan-900/40 transition"
+            className="mt-2 w-full resize-none bg-[#081a2d] border border-[#314d69] rounded-xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-900/40 transition"
           />
 
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-3">
 
-          <span className="text-[10px] text-slate-500">
+          <span className="text-[10px] text-slate-400">
             {jobDescription.length} characters (min 20)
           </span>
 

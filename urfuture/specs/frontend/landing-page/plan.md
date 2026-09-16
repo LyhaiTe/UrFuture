@@ -38,14 +38,17 @@ The user can click **Student Sign In** or **Get Started** to begin the authentic
 The user is presented with a clean authentication modal. They can:
 
 * Sign in using Google OAuth.
-* Register using their academic information.
+* Register before using email/password sign-in.
+* Sign in later with the email and password used during registration.
 * Provide details such as:
 
   * Institution
-  * Track
   * Level
 
 The authentication experience should remain simple and avoid unnecessary page reloads.
+
+Students cannot sign in with email/password before registering. The application
+must not silently create an account during sign-in.
 
 ### 3.5 Onboarding
 

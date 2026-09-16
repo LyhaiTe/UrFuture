@@ -1,5 +1,14 @@
 # Tasks: UrFuture Job Fit
 
+## Completed integration fixes
+
+- [x] Return the fit analysis under the `result` response property.
+- [x] Normalize matched and missing skill names into the UI skill-gap shape.
+- [x] Map the AI fit score and summary to the panel's `fitScore` and
+  `explanation` fields.
+- [x] Send missing skills to study-plan generation as `targetSkillNames`.
+- [x] Return explicit JSON errors for missing accounts and provider failures.
+
 - [ ] J001 [IDC-1] Add session authorization and ownership checks to `src/app/api/job/match/route.ts`, `src/app/api/career/recommend/route.ts`, and `src/app/api/study-plan/generate/route.ts`.
 - [ ] J002 [IDC-1] Add shared request validation, text length limits, request IDs, and redacted error responses in `src/lib/observability.ts`.
 - [ ] J003 [IDC-1] Add cross-user and invalid-input contract tests in `tests/contract/job-fit-ownership.test.ts`.

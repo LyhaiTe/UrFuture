@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_USER: advisor
       POSTGRES_PASSWORD: advisor
-      POSTGRES_DB: cambodia_advisor
+      POSTGRES_DB: urfuture
     ports:
       - '5433:5432'
     volumes:

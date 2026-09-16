@@ -135,6 +135,7 @@ async function main() {
   await prisma.quizQuestion.createMany({
     data: [
       {
+        careerPathId: softwareEngineer.id,
         skillId: skills['Algebra & Precalculus'],
         prompt: 'Solve for x: 3x + 7 = 22',
         choices: ['x = 5', 'x = 3', 'x = 7', 'x = 15'],
@@ -143,6 +144,7 @@ async function main() {
         sourceCourse: 'MATH101',
       },
       {
+        careerPathId: softwareEngineer.id,
         skillId: skills['Programming Fundamentals'],
         prompt: 'What data structure uses FIFO (First-In-First-Out) ordering?',
         choices: ['Stack', 'Queue', 'Tree', 'Hash Map'],
@@ -151,6 +153,7 @@ async function main() {
         sourceCourse: 'CS101',
       },
       {
+        careerPathId: businessAnalyst.id,
         skillId: skills['Statistics & Probability'],
         prompt: 'What does a p-value of 0.03 typically suggest at a 0.05 significance level?',
         choices: [
@@ -164,6 +167,7 @@ async function main() {
         sourceCourse: 'STAT201',
       },
       {
+        careerPathId: electricalEngineer.id,
         skillId: skills['Physics'],
         prompt: 'What is the SI unit of electrical resistance?',
         choices: ['Volt', 'Ampere', 'Ohm', 'Watt'],
@@ -172,6 +176,7 @@ async function main() {
         sourceCourse: 'PHYS102',
       },
       {
+        careerPathId: softwareEngineer.id,
         skillId: skills['Data Structures & Algorithms'],
         prompt: 'What is the average time complexity of binary search on a sorted array?',
         choices: ['O(n)', 'O(log n)', 'O(n^2)', 'O(1)'],

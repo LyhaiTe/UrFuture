@@ -1,6 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
+import {
+  ArrowRight,
+  Bot,
+  BrainCircuit,
+  BriefcaseBusiness,
+  FileText,
+  Menu,
+  ShieldCheck,
+  Sparkles,
+  X,
+} from 'lucide-react';
 import UrFutureLogo from 'src/components/UrFutureLogo';
 import ThemeToggle from '@/components/ThemeToggle';
 
@@ -106,13 +117,7 @@ export default function LandingPage({ onOpenAuth }: LandingPageProps) {
                 aria-expanded={isMobileNavOpen}
                 className="lg:hidden inline-flex items-center justify-center w-9 h-9 rounded-lg bg-dark-navSurface hover:bg-dark-cardHover border border-dark-borderPanelHover text-slate-300 hover:text-white transition-colors"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  {isMobileNavOpen ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  )}
-                </svg>
+                {isMobileNavOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
               </button>
             </div>
           </div>
@@ -161,9 +166,7 @@ export default function LandingPage({ onOpenAuth }: LandingPageProps) {
                 className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-brand-cyan hover:bg-brand-cyanBright text-dark-textOnBrand font-extrabold text-sm shadow-xl shadow-brand-cyan/30 transition-all hover:scale-[1.03] active:scale-[0.98]"
               >
                 <span>Get Started</span>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
+                <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
               </button>
             </div>
 
@@ -230,9 +233,7 @@ export default function LandingPage({ onOpenAuth }: LandingPageProps) {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
               <div className="p-6 rounded-xl bg-dark-surface border border-dark-border hover:border-brand-cyan/50 transition-all group">
                 <div className="w-16 h-16 mx-auto rounded-full bg-brand-cyan/10 border border-brand-cyan/30 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <svg className="w-8 h-8 text-brand-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                  <FileText className="w-8 h-8 text-brand-cyan" strokeWidth={1.5} />
                 </div>
                 <h4 className="text-base font-bold text-white mb-2">1. Upload Transcripts</h4>
                 <p className="text-sm text-slate-400">Securely parse your academic history into structured data.</p>
@@ -240,9 +241,7 @@ export default function LandingPage({ onOpenAuth }: LandingPageProps) {
 
               <div className="p-6 rounded-xl bg-dark-surface border border-dark-border hover:border-brand-emerald/50 transition-all group">
                 <div className="w-16 h-16 mx-auto rounded-full bg-brand-emerald/10 border border-brand-emerald/30 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <svg className="w-8 h-8 text-brand-emerald" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
+                  <BrainCircuit className="w-8 h-8 text-brand-emerald" strokeWidth={1.5} />
                 </div>
                 <h4 className="text-base font-bold text-white mb-2">2. AI Knowledge Mapping</h4>
                 <p className="text-sm text-slate-400">Adaptive quizzes verify your true competency, not just grades.</p>
@@ -250,9 +249,7 @@ export default function LandingPage({ onOpenAuth }: LandingPageProps) {
 
               <div className="p-6 rounded-xl bg-dark-surface border border-dark-border hover:border-brand-violet/50 transition-all group">
                 <div className="w-16 h-16 mx-auto rounded-full bg-brand-violet/10 border border-brand-violet/30 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <svg className="w-8 h-8 text-brand-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
+                  <BriefcaseBusiness className="w-8 h-8 text-brand-violet" strokeWidth={1.5} />
                 </div>
                 <h4 className="text-base font-bold text-white mb-2">3. Grounded Career Match</h4>
                 <p className="text-sm text-slate-400">Get personalized roadmaps backed by real Cambodian market data.</p>
@@ -275,9 +272,7 @@ export default function LandingPage({ onOpenAuth }: LandingPageProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="p-6 rounded-2xl bg-dark-card border border-dark-border hover:border-brand-cyan/50 shadow-sm transition-all group">
               <div className="w-12 h-12 rounded-xl bg-brand-cyan/10 border border-brand-cyan/30 text-brand-cyan flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
+                <FileText className="w-6 h-6" strokeWidth={1.5} />
               </div>
               <h3 className="text-base font-bold text-slate-100 mb-2">Transcript-Grounded Profile</h3>
               <p className="text-sm text-slate-400 leading-relaxed">Upload Year 1–4 transcripts and let AI build a structured academic profile from your actual coursework.</p>
@@ -285,9 +280,7 @@ export default function LandingPage({ onOpenAuth }: LandingPageProps) {
 
             <div className="p-6 rounded-2xl bg-dark-card border border-dark-border hover:border-brand-emerald/50 shadow-sm transition-all group">
               <div className="w-12 h-12 rounded-xl bg-brand-emerald/10 border border-brand-emerald/30 text-brand-emerald flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 3v18m6-18v18M4 8h4m8 0h4M4 16h4m8 0h4" />
-                </svg>
+                <BrainCircuit className="w-6 h-6" strokeWidth={1.5} />
               </div>
               <h3 className="text-base font-bold text-slate-100 mb-2">Adaptive Knowledge Diagnostics</h3>
               <p className="text-sm text-slate-400 leading-relaxed">A quiz generated from your own courses measures real mastery percentages for accurate recommendations.</p>
@@ -295,9 +288,7 @@ export default function LandingPage({ onOpenAuth }: LandingPageProps) {
 
             <div className="p-6 rounded-2xl bg-dark-card border border-dark-border hover:border-brand-amber/50 shadow-sm transition-all group">
               <div className="w-12 h-12 rounded-xl bg-brand-amber/10 border border-brand-amber/30 text-brand-amber flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
+                <BriefcaseBusiness className="w-6 h-6" strokeWidth={1.5} />
               </div>
               <h3 className="text-base font-bold text-slate-100 mb-2">Cited Career & Job-Fit Matching</h3>
               <p className="text-sm text-slate-400 leading-relaxed">Every match is grounded against O*NET and NEA Cambodia data with explicit skill gap analysis.</p>
@@ -305,9 +296,7 @@ export default function LandingPage({ onOpenAuth }: LandingPageProps) {
 
             <div className="p-6 rounded-2xl bg-dark-card border border-dark-border hover:border-brand-violet/50 shadow-sm transition-all group">
               <div className="w-12 h-12 rounded-xl bg-brand-violet/10 border border-brand-violet/30 text-brand-violet flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <Sparkles className="w-6 h-6" strokeWidth={1.5} />
               </div>
               <h3 className="text-base font-bold text-slate-100 mb-2">Personalized Study Roadmaps</h3>
               <p className="text-sm text-slate-400 leading-relaxed">Get a week-by-week plan with curated resources targeting exactly the skill gaps you need to close.</p>
@@ -315,9 +304,7 @@ export default function LandingPage({ onOpenAuth }: LandingPageProps) {
 
             <div className="p-6 rounded-2xl bg-dark-card border border-dark-border hover:border-brand-blueAmbient/50 shadow-sm transition-all group">
               <div className="w-12 h-12 rounded-xl bg-brand-blueAmbient/10 border border-brand-blueAmbient/30 text-brand-blueAmbient flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
+                <ShieldCheck className="w-6 h-6" strokeWidth={1.5} />
               </div>
               <h3 className="text-base font-bold text-slate-100 mb-2">Counselor Safety Gate</h3>
               <p className="text-sm text-slate-400 leading-relaxed">High-stakes decisions automatically route to a human counselor for review before finalization.</p>
@@ -325,9 +312,7 @@ export default function LandingPage({ onOpenAuth }: LandingPageProps) {
 
             <div className="p-6 rounded-2xl bg-dark-card border border-dark-border hover:border-brand-mint/50 shadow-sm transition-all group">
               <div className="w-12 h-12 rounded-xl bg-brand-mint/10 border border-brand-mint/30 text-brand-mint flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
+                <Sparkles className="w-6 h-6" strokeWidth={1.5} />
               </div>
               <h3 className="text-base font-bold text-slate-100 mb-2">AI Copilot Chat</h3>
               <p className="text-sm text-slate-400 leading-relaxed">Ask follow-up questions anytime — the copilot draws on your transcripts and saved plans.</p>

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { ArrowRight, BarChart3, BriefcaseBusiness, FileUp, Gauge, Map } from 'lucide-react';
 
 interface DashboardWorkspaceProps {
   userId: string;
@@ -59,64 +60,21 @@ export default function DashboardWorkspace({
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#00d2ff] hover:bg-[#00bfe6] text-[#070d1a] font-bold text-sm shadow-lg shadow-[#00d2ff]/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
                 Continue Mapping
-
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2.5}
-                    d="M13 7l5 5m0 0l-5 5m5-5H6"
-                  />
-                </svg>
+                <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
               </button>
             </div>
           </div>
 
-          {/* Readiness Ring */}
+          {/* Readiness indicator */}
           <div className="flex flex-col items-center shrink-0">
-            <div className="relative w-28 h-28">
-              <svg
-                className="w-28 h-28 -rotate-90"
-                viewBox="0 0 100 100"
-              >
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="42"
-                  fill="none"
-                  stroke="#1b2947"
-                  strokeWidth="7"
-                />
+            <div className="relative flex items-center justify-center w-28 h-28 rounded-full border border-[#1b3c66] bg-[#0d1f36]/80 shadow-[0_0_20px_rgba(0,210,255,0.15)]">
+              <div className="absolute inset-3 rounded-full border border-[#1b3c66]/80" />
+              <Gauge className="w-12 h-12 text-[#00d2ff]" strokeWidth={2} />
+            </div>
 
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="42"
-                  fill="none"
-                  stroke="#00d2ff"
-                  strokeWidth="7"
-                  strokeLinecap="round"
-                  strokeDasharray={`${
-                    2 * Math.PI * 42 * 0.82
-                  } ${2 * Math.PI * 42}`}
-                  className="drop-shadow-[0_0_8px_#00d2ff]"
-                />
-              </svg>
-
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-extrabold text-white">
-                  82
-                </span>
-
-                <span className="text-[10px] text-slate-400 font-medium">
-                  / 100
-                </span>
-              </div>
+            <div className="mt-2 text-center">
+              <div className="text-2xl font-extrabold text-white leading-none">82</div>
+              <div className="text-[10px] text-slate-400 font-medium">/ 100</div>
             </div>
 
             <span className="mt-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -196,19 +154,7 @@ export default function DashboardWorkspace({
             >
               <div className="flex items-start justify-between">
                 <div className="w-10 h-10 rounded-lg bg-[#0e2542] border border-[#1b3c66] flex items-center justify-center text-[#00d2ff]">
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                    />
-                  </svg>
+                  <BarChart3 className="w-5 h-5" strokeWidth={2} />
                 </div>
               </div>
 
@@ -242,19 +188,7 @@ export default function DashboardWorkspace({
             >
               <div className="flex items-start justify-between">
                 <div className="w-10 h-10 rounded-lg bg-[#0e2542] border border-[#1b3c66] flex items-center justify-center text-[#00d2ff]">
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-                    />
-                  </svg>
+                  <Map className="w-5 h-5" strokeWidth={2} />
                 </div>
 
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#064e3b] text-[#34d399] border border-[#0d6d53]/50">
@@ -282,19 +216,7 @@ export default function DashboardWorkspace({
             >
               <div className="flex items-start justify-between">
                 <div className="w-10 h-10 rounded-lg bg-[#0e2542] border border-[#1b3c66] flex items-center justify-center text-[#00d2ff]">
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                    />
-                  </svg>
+                  <BriefcaseBusiness className="w-5 h-5" strokeWidth={2} />
                 </div>
               </div>
 
@@ -318,19 +240,7 @@ export default function DashboardWorkspace({
             >
               <div className="flex items-start justify-between">
                 <div className="w-10 h-10 rounded-lg bg-[#0e2542] border border-[#1b3c66] flex items-center justify-center text-[#00d2ff]">
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                    />
-                  </svg>
+                  <FileUp className="w-5 h-5" strokeWidth={2} />
                 </div>
               </div>
 
@@ -380,16 +290,6 @@ export default function DashboardWorkspace({
             </div>
           </div>
         </div>
-
-      {/* ========================================================================= */}
-      {/* FOOTER */}
-      {/* ========================================================================= */}
-
-      <div className="mt-12 pt-6 border-t border-[#1b2947]/50 text-center">
-        <p className="text-xs text-slate-500">
-          UrFuture — Learn · Plan · Achieve
-        </p>
-      </div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { SlidersHorizontal } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { CAREER_CATEGORIES } from '@/data/careerCategories';
 import {
@@ -144,7 +145,7 @@ export default function FiltersPanel({
             : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
         }`}
       >
-        <span aria-hidden="true">⚙</span>
+        <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
         <span>Filters</span>
         {activeCount > 0 && (
           <span

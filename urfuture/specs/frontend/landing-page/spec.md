@@ -176,9 +176,13 @@ When **Create Account** is selected, conditionally render:
 * Full Name
 * Institution
 * Academic Level
-* Academic Track
 
-Use dropdown inputs for Institution, Academic Level, and Academic Track.
+Use dropdown inputs for Institution and Academic Level.
+
+Registration must happen before email/password sign-in. Registration creates the
+student account, while sign-in only verifies an existing account and never
+creates one. Registration passwords must contain at least 8 characters and
+include an uppercase letter, lowercase letter, number, and symbol.
 
 #### Google OAuth
 
@@ -204,6 +208,10 @@ Use dropdown inputs for Institution, Academic Level, and Academic Track.
   * The API returns an error.
 
 * Error messages should clearly explain what the user needs to correct.
+
+The form must show a clear error when a student attempts to sign in before
+registering or uses an incorrect password. It must not use an offline fallback
+that logs the student in without a persisted account.
 
 #### Footer
 
