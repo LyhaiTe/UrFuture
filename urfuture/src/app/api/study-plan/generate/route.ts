@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import type { Prisma } from '@prisma/client';
-import { runToolCall, GENERATE_STUDY_PLAN_TOOL } from '@/lib/claude';
+import { runToolCall, GENERATE_STUDY_PLAN_TOOL } from '@/lib/llm';
 import { BASE_SYSTEM_PROMPT, STUDY_PLAN_FUNCTION_INSTRUCTIONS } from '@/lib/prompts';
 import { getStudentSkillContext, formatStudentSkillsForPrompt } from '@/lib/knowledgeBase';
+import { retrieveRelevantContextForMany } from '@/lib/rag';
 import type { StudyPlanResult } from '@/types';
 
 export const runtime = 'nodejs';
@@ -28,7 +29,18 @@ export async function POST(req: NextRequest) {
   const skills = await getStudentSkillContext(userId);
   const skillContext = formatStudentSkillsForPrompt(skills);
 
-  const userMessage = `STUDENT SKILL PROFILE:\n${skillContext}\n\nTarget skills to close gaps on: ${targetSkillNames.join(', ')}.\nPreferred plan length: ${weeksRequested ?? 6} weeks.\nCall generate_study_plan with your result.`;
+  // Pull real course-module/syllabus chunks for each target skill (RUPP,
+  // ITC, CADT, Norton, etc.) so the plan's weekly resources cite actual
+  // curricula instead of the model inventing plausible-sounding courses.
+  const { contextText: syllabusContext, citations: syllabusCitations } = await retrieveRelevantContextForMany(
+    targetSkillNames,
+    { category: 'ACADEMIC_SYLLABUS' }
+  );
+  const syllabusBlock = syllabusContext
+    ? `\n\nRELEVANT CURRICULUM / COURSE MATERIAL (cite by SOURCE shown; note any resource you can't ground this way as a general study strategy instead):\n${syllabusContext}`
+    : '';
+
+  const userMessage = `STUDENT SKILL PROFILE:\n${skillContext}\n\nTarget skills to close gaps on: ${targetSkillNames.join(', ')}.\nPreferred plan length: ${weeksRequested ?? 6} weeks.${syllabusBlock}\nCall generate_study_plan with your result.`;
 
   const result = await runToolCall<StudyPlanResult>({
     system: `${BASE_SYSTEM_PROMPT}\n\n${STUDY_PLAN_FUNCTION_INSTRUCTIONS}`,
@@ -36,16 +48,21 @@ export async function POST(req: NextRequest) {
     tool: GENERATE_STUDY_PLAN_TOOL,
   });
 
+  // Merge the model's self-reported citations with the retrieval-layer
+  // citations for the chunks it was actually shown, so StudyPlan.citations
+  // stays chunk-verifiable rather than only self-reported.
+  const mergedCitations = [...result.citations, ...syllabusCitations];
+
   const saved = await prisma.studyPlan.create({
     data: {
       userId,
       title: result.title,
       targetSkillIds: result.targetSkills,
       weeks: result.weeks as unknown as Prisma.InputJsonValue,
-      citations: result.citations as unknown as Prisma.InputJsonValue,
+      citations: mergedCitations as unknown as Prisma.InputJsonValue,
       status: 'DRAFT',
     },
   });
 
-  return NextResponse.json({ studyPlan: { ...result, id: saved.id } });
+  return NextResponse.json({ studyPlan: { ...result, citations: mergedCitations, id: saved.id } });
 }

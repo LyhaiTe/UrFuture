@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import type { Prisma } from '@prisma/client';
-import { runToolCall, ANALYZE_SKILL_GAP_TOOL } from '@/lib/claude';
+import { runToolCall, ANALYZE_SKILL_GAP_TOOL } from '@/lib/llm';
 import { BASE_SYSTEM_PROMPT, SKILL_GAP_FUNCTION_INSTRUCTIONS } from '@/lib/prompts';
 import { getCareerContext, getStudentSkillContext, formatCareerContextForPrompt, formatStudentSkillsForPrompt } from '@/lib/knowledgeBase';
-import { flagForCounselorReview, estimateGroundedness } from '@/lib/guardrails';
+import { flagForCounselorReview, estimateGroundednessAgainstChunks } from '@/lib/guardrails';
+import { retrieveRelevantContext } from '@/lib/rag';
 import type { SkillGapAnalysisResult } from '@/types';
 
 export const runtime = 'nodejs';
@@ -42,7 +43,18 @@ export async function POST(req: NextRequest) {
   const results: SkillGapAnalysisResult[] = [];
 
   for (const career of careers) {
-    const userMessage = `STUDENT SKILL PROFILE:\n${skillContext}\n\nCANDIDATE CAREER(S) FROM KNOWLEDGE BASE:\n${careerContext}\n\nAnalyze the student's fit specifically for: "${career.title}". Call analyze_skill_gap with your result.`;
+    // Targeted retrieval per career: real NEA wage-demand / ILOSTAT chunks
+    // to ground salary and growth-outlook claims beyond the seeded
+    // CareerPath row's own sourceNote.
+    const { contextText: ragContext, chunks: ragChunks } = await retrieveRelevantContext(
+      `${career.title} salary outlook demand Cambodia`,
+      { category: 'LABOR_STAT' }
+    );
+    const laborStatBlock = ragContext
+      ? `\n\nREAL LABOR-MARKET DATA (NEA/ILOSTAT, cite by SOURCE shown):\n${ragContext}`
+      : '';
+
+    const userMessage = `STUDENT SKILL PROFILE:\n${skillContext}\n\nCANDIDATE CAREER(S) FROM KNOWLEDGE BASE:\n${careerContext}${laborStatBlock}\n\nAnalyze the student's fit specifically for: "${career.title}". Call analyze_skill_gap with your result.`;
 
     const result = await runToolCall<SkillGapAnalysisResult>({
       system: `${BASE_SYSTEM_PROMPT}\n\n${SKILL_GAP_FUNCTION_INSTRUCTIONS}`,
@@ -51,8 +63,9 @@ export async function POST(req: NextRequest) {
     });
 
     // Server-side groundedness cross-check, independent of the model's own
-    // self-reported groundednessScore.
-    const measuredGroundedness = estimateGroundedness(result.rationale, result.citations.length);
+    // self-reported groundednessScore — verifies citations actually trace
+    // back to chunks retrieved for this career, not just that citations exist.
+    const measuredGroundedness = estimateGroundednessAgainstChunks(result.rationale, result.citations, ragChunks);
     if (measuredGroundedness < 0.9) {
       result.requiresCounselorReview = true;
       result.reviewReason = (result.reviewReason ? result.reviewReason + '; ' : '') +
