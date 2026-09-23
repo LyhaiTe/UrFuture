@@ -57,67 +57,64 @@ export async function retrieveRelevantContext(
     return { contextText: '', citations: [], chunks: [] };
   }
 
-  let queryEmbedding: number[];
   try {
-    queryEmbedding = await embedText(query);
-  } catch (err) {
-    // Retrieval must never take the whole request down — if the embedding
-    // provider is unreachable/misconfigured, fall back to "no context" and
-    // let the caller's own no-context handling (and the groundedness
-    // guardrail) take over, rather than 500-ing the chat/recommend routes.
-    console.error('[rag] embedText failed, returning empty context:', err);
-    return { contextText: '', citations: [], chunks: [] };
-  }
+    const queryEmbedding = await embedText(query);
+    const vectorLiteral = toVectorLiteral(queryEmbedding);
 
-  const vectorLiteral = toVectorLiteral(queryEmbedding);
+    // $queryRawUnsafe is used only to interpolate the category filter clause
+    // (a fixed, code-controlled string, never user input); all actual values
+    // — the vector literal and limit — are still bound as parameters.
+    const categoryClause = options?.category ? `AND d.category = $3::"KnowledgeCategory"` : '';
 
-  // $queryRawUnsafe is used only to interpolate the category filter clause
-  // (a fixed, code-controlled string, never user input); all actual values
-  // — the vector literal and limit — are still bound as parameters.
-  const categoryClause = options?.category ? `AND d.category = $3::"KnowledgeCategory"` : '';
+    const rows = await prisma.$queryRawUnsafe<RawChunkRow[]>(
+      `
+      SELECT
+        c.id,
+        c."documentId",
+        c.content,
+        c.metadata,
+        d.title,
+        d.source,
+        1 - (c.embedding <=> $1::vector) AS similarity
+      FROM "KnowledgeChunk" c
+      JOIN "KnowledgeDocument" d ON d.id = c."documentId"
+      WHERE c.embedding IS NOT NULL
+      ${categoryClause}
+      ORDER BY c.embedding <=> $1::vector ASC
+      LIMIT $2
+      `,
+      vectorLiteral,
+      limit,
+      ...(options?.category ? [options.category] : [])
+    );
 
-  const rows = await prisma.$queryRawUnsafe<RawChunkRow[]>(
-    `
-    SELECT
-      c.id,
-      c."documentId",
-      c.content,
-      c.metadata,
-      d.title,
-      d.source,
-      1 - (c.embedding <=> $1::vector) AS similarity
-    FROM "KnowledgeChunk" c
-    JOIN "KnowledgeDocument" d ON d.id = c."documentId"
-    WHERE c.embedding IS NOT NULL
-    ${categoryClause}
-    ORDER BY c.embedding <=> $1::vector ASC
-    LIMIT $2
-    `,
-    vectorLiteral,
-    limit,
-    ...(options?.category ? [options.category] : [])
-  );
+    const chunks: RetrievedChunk[] = rows
+      .filter((r) => r.similarity >= threshold)
+      .map((r) => ({
+        id: r.id,
+        documentId: r.documentId,
+        source: r.source,
+        title: r.title,
+        content: r.content,
+        similarity: r.similarity,
+        metadata: (r.metadata as Record<string, unknown>) ?? {},
+      }));
 
-  const chunks: RetrievedChunk[] = rows
-    .filter((r) => r.similarity >= threshold)
-    .map((r) => ({
-      id: r.id,
-      documentId: r.documentId,
-      source: r.source,
-      title: r.title,
-      content: r.content,
-      similarity: r.similarity,
-      metadata: (r.metadata as Record<string, unknown>) ?? {},
+    const contextText = formatChunksForPrompt(chunks);
+    const citations: GroundingCitation[] = chunks.map((c) => ({
+      source: c.source,
+      reference: `${c.title} (chunk ${c.id})`,
+      claim: c.content.slice(0, 160).trim() + (c.content.length > 160 ? '…' : ''),
     }));
 
-  const contextText = formatChunksForPrompt(chunks);
-  const citations: GroundingCitation[] = chunks.map((c) => ({
-    source: c.source,
-    reference: `${c.title} (chunk ${c.id})`,
-    claim: c.content.slice(0, 160).trim() + (c.content.length > 160 ? '…' : ''),
-  }));
-
-  return { contextText, citations, chunks };
+    return { contextText, citations, chunks };
+  } catch (err) {
+    // Retrieval must never take the whole request down — if the embedding
+    // provider is unreachable/misconfigured, or pgvector / KnowledgeChunk
+    // table hasn't been migrated yet, fall back cleanly to empty context.
+    console.warn('[rag] Context retrieval failed, continuing without RAG:', err instanceof Error ? err.message : err);
+    return { contextText: '', citations: [], chunks: [] };
+  }
 }
 
 /** Formats retrieved chunks into a compact, citation-friendly block to

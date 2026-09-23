@@ -2,7 +2,11 @@ import crypto from 'crypto';
 
 export const EMBEDDING_DIMENSIONS = 1536;
 
-const PROVIDER = (process.env.EMBEDDING_PROVIDER || 'openai').toLowerCase();
+const rawProvider = process.env.EMBEDDING_PROVIDER;
+const PROVIDER = (
+  rawProvider ||
+  (process.env.VOYAGE_API_KEY ? 'voyage' : process.env.OPENAI_API_KEY ? 'openai' : 'local')
+).toLowerCase();
 const MODEL = process.env.EMBEDDING_MODEL || 'text-embedding-3-small';
 
 async function embedWithOpenAI(texts: string[]): Promise<number[][]> {
@@ -72,7 +76,7 @@ function embedLocal(texts: string[]): number[][] {
 /** Batch-embed multiple texts in one call (preferred for ingestion). */
 export async function embedTexts(texts: string[]): Promise<number[][]> {
   if (texts.length === 0) return [];
-  const provider = (process.env.EMBEDDING_PROVIDER || 'voyage').toLowerCase();
+  const provider = PROVIDER;
   switch (provider) {
     case 'openai':
       return embedWithOpenAI(texts);
