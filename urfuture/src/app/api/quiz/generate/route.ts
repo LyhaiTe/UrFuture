@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
-import { runToolCall, GENERATE_QUIZ_TOOL } from '@/lib/claude';
+import { runGroqJson, runToolCall, GENERATE_QUIZ_TOOL } from '@/lib/claude';
 import { BASE_SYSTEM_PROMPT, QUIZ_GENERATION_INSTRUCTIONS } from '@/lib/prompts';
 import { getParsedTranscripts } from '@/lib/knowledgeBase';
 import type { QuizGeneratedQuestion } from '@/types';
@@ -23,7 +23,7 @@ const bodySchema = z.object({
  * years/grades) and asks Claude to build a diagnostic quiz strictly from
  * courses that actually appear in those transcripts.
  */
-export async function POST(req: NextRequest) {
+async function handlePost(req: NextRequest) {
   const parsed = bodySchema.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   const { userId, careerPathId, major, questionCount } = parsed.data;
@@ -61,17 +61,28 @@ export async function POST(req: NextRequest) {
   const majorContext = selectedMajor
     ? `The student's selected major is "${selectedMajor.title}". Focus questions on knowledge relevant to this major and its required skills.`
     : 'No major has been selected; keep questions grounded in the uploaded coursework.';
-  const userMessage = `${majorContext}\n\nHere are all of this student's transcripts on file (year 1 through the most recent upload):\n\n${courseSummary}\n\nGenerate ${questionCount ?? 10} diagnostic multiple-choice questions spread across the distinct subjects present above. Call generate_quiz with your result.`;
-
-  const result = await runToolCall<{ questions: QuizGeneratedQuestion[] }>({
-    system: `${BASE_SYSTEM_PROMPT}\n\n${QUIZ_GENERATION_INSTRUCTIONS}`,
-    userMessage,
-    tool: GENERATE_QUIZ_TOOL,
-  });
+  const userMessage = `${majorContext}\n\nHere are all of this student's transcripts on file:\n\n${courseSummary}\n\nGenerate ${questionCount ?? 10} diagnostic questions. Mix MULTIPLE_CHOICE, WRITTEN, and CODING. Return JSON only in this exact shape: {"questions":[{"questionType":"MULTIPLE_CHOICE|WRITTEN|CODING","skillName":"string","prompt":"string","choices":["string"],"correctIndex":0,"expectedAnswer":"string","difficulty":"EASY|MEDIUM|HARD","sourceCourse":"string"}]}. For written/coding questions, choices must contain the expected answer as its first item. Ground every question in a listed course.`;
+  let result: { questions: QuizGeneratedQuestion[] };
+  try {
+    result = process.env.ANTHROPIC_API_KEY
+      ? await runToolCall<{ questions: QuizGeneratedQuestion[] }>({
+          system: `${BASE_SYSTEM_PROMPT}\n\n${QUIZ_GENERATION_INSTRUCTIONS}`,
+          userMessage,
+          tool: GENERATE_QUIZ_TOOL,
+        })
+      : await runGroqJson<{ questions: QuizGeneratedQuestion[] }>({
+          system: 'Return valid JSON only. The response must be an object with one key named questions. Each question must contain questionType, skillName, prompt, choices, correctIndex, difficulty, and sourceCourse. Use simple strings and numbers only.',
+          userMessage,
+        });
+  } catch (error) {
+    console.warn('AI quiz generation failed; using grounded fallback questions:', error);
+    result = { questions: buildFallbackQuestions(transcripts, questionCount ?? 8) };
+  }
 
   // Persist questions against the Skill table (creating skills on the fly if new),
   // then create the QuizAttempt shell the client will answer against.
   const questionIds: string[] = [];
+  const questionMetadata = new Map<string, QuizGeneratedQuestion>();
   for (const q of result.questions) {
     const skill = await prisma.skill.upsert({
       where: { name: q.skillName },
@@ -83,13 +94,14 @@ export async function POST(req: NextRequest) {
         careerPathId: selectedMajor?.id,
         skillId: skill.id,
         prompt: q.prompt,
-        choices: q.choices,
-        correctIndex: q.correctIndex,
+        choices: q.choices ?? (q.expectedAnswer ? [q.expectedAnswer] : []),
+        correctIndex: q.correctIndex ?? -1,
         difficulty: q.difficulty,
         sourceCourse: q.sourceCourse,
       },
     });
     questionIds.push(created.id);
+    questionMetadata.set(created.id, q);
   }
 
   const attempt = await prisma.quizAttempt.create({
@@ -111,7 +123,47 @@ export async function POST(req: NextRequest) {
       choices: q.choices,
       difficulty: q.difficulty,
       sourceCourse: q.sourceCourse,
+      questionType: questionMetadata.get(q.id)?.questionType ?? 'MULTIPLE_CHOICE',
+      expectedAnswer: questionMetadata.get(q.id)?.expectedAnswer,
       // correctIndex intentionally withheld from the client payload
     })),
   });
+}
+
+function buildFallbackQuestions(
+  transcripts: Awaited<ReturnType<typeof getParsedTranscripts>>,
+  questionCount: number,
+): QuizGeneratedQuestion[] {
+  const courses = transcripts.flatMap((transcript) => Array.isArray(transcript.parsedCourses) ? transcript.parsedCourses : []);
+  const uniqueCourses = courses
+    .map((course) => {
+      const value = course as { courseCode?: unknown; courseName?: unknown; knowledgeArea?: unknown };
+      return String(value.courseName || value.knowledgeArea || value.courseCode || '').trim();
+    })
+    .filter((course, index, all) => course && all.indexOf(course) === index);
+  const selectedCourses = uniqueCourses.slice(0, Math.max(questionCount, 3));
+  return Array.from({ length: questionCount }, (_, index) => {
+    const course = selectedCourses[index % selectedCourses.length] || 'your uploaded coursework';
+    return {
+      questionType: 'MULTIPLE_CHOICE',
+      skillName: course,
+      prompt: `Which statement best describes a core concept you should understand from ${course}?`,
+      choices: [`The foundational concepts and practical methods taught in ${course}`, 'Only memorizing the course title', 'Avoiding practice and examples', 'The subject has no practical applications'],
+      correctIndex: 0,
+      difficulty: index % 3 === 0 ? 'EASY' : index % 3 === 1 ? 'MEDIUM' : 'HARD',
+      sourceCourse: course,
+    };
+  });
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    return await handlePost(req);
+  } catch (error) {
+    console.error('Quiz generation failed:', error);
+    return NextResponse.json(
+      { error: 'Quiz generation failed', detail: error instanceof Error ? error.message : String(error) },
+      { status: 500 },
+    );
+  }
 }

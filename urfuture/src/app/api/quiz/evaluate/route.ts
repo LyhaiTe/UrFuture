@@ -6,7 +6,7 @@ export const runtime = 'nodejs';
 
 const bodySchema = z.object({
   quizAttemptId: z.string(),
-  answers: z.array(z.object({ questionId: z.string(), selectedIndex: z.number() })),
+  answers: z.array(z.object({ questionId: z.string(), selectedIndex: z.number().optional(), studentAnswer: z.string().optional() })),
 });
 
 /**
@@ -23,7 +23,7 @@ const bodySchema = z.object({
  * a separate call so the heavier Claude reasoning step stays optional and
  * explicit rather than bundled into grading.
  */
-export async function POST(req: NextRequest) {
+async function handlePost(req: NextRequest) {
   const parsed = bodySchema.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   const { quizAttemptId, answers } = parsed.data;
@@ -41,14 +41,19 @@ export async function POST(req: NextRequest) {
   for (const a of answers) {
     const q = questionById.get(a.questionId);
     if (!q) continue;
-    const isCorrect = a.selectedIndex === q.correctIndex;
+    const isWritten = a.studentAnswer !== undefined;
+    const expectedAnswer = Array.isArray(q.choices) ? q.choices[0] : null;
+    const isCorrect = isWritten
+      ? typeof expectedAnswer === 'string' && a.studentAnswer!.trim().toLowerCase() === expectedAnswer.trim().toLowerCase()
+      : a.selectedIndex === q.correctIndex;
     if (isCorrect) correctCount += 1;
 
     await prisma.quizAnswer.create({
       data: {
         quizAttemptId,
         questionId: q.id,
-        selectedIndex: a.selectedIndex,
+        selectedIndex: a.selectedIndex ?? -1,
+        studentAnswer: a.studentAnswer,
         isCorrect,
       },
     });
@@ -83,4 +88,16 @@ export async function POST(req: NextRequest) {
     totalQuestions: answers.length,
     nextStep: 'Call POST /api/career/recommend with this userId to get job/major recommendations based on this score.',
   });
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    return await handlePost(req);
+  } catch (error) {
+    console.error('Quiz evaluation failed:', error);
+    return NextResponse.json(
+      { error: 'Quiz evaluation failed', detail: error instanceof Error ? error.message : String(error) },
+      { status: 500 },
+    );
+  }
 }

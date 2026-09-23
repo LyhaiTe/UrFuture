@@ -55,10 +55,12 @@ export interface JobFitResult {
 }
 
 export interface QuizGeneratedQuestion {
+  questionType: 'MULTIPLE_CHOICE' | 'WRITTEN' | 'CODING';
   skillName: string;
   prompt: string;
   choices: string[];
-  correctIndex: number;
+  correctIndex?: number;
+  expectedAnswer?: string;
   difficulty: 'EASY' | 'MEDIUM' | 'HARD';
   sourceCourse?: string;
 }
