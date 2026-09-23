@@ -1,12 +1,15 @@
 'use client';
 
 import { useRef, useState, useEffect } from 'react';
-import { ArrowRight, Bot, MessageSquareText, Sparkles, X } from 'lucide-react';
+import { ArrowRight, Bot, BookOpen, ChevronDown, Sparkles, X } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   toolCalls?: { tool: string; input: unknown }[];
+  citations?: { source: string; reference: string; claim: string }[];
 }
 
 interface ChatPanelProps {
@@ -22,31 +25,119 @@ const SUGGESTED_PROMPTS = [
   'Suggest a 6-week study plan for Python & Algorithms',
 ];
 
-// Simple markdown-like renderer (bold + inline code)
-function renderContent(text: string) {
-  if (!text) return null;
-  // Bold **text**
-  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith('**') && part.endsWith('**')) {
-      return (
-        <strong key={i} className="font-bold text-cyan-600 dark:text-cyan-400">
-          {part.slice(2, -2)}
-        </strong>
-      );
-    }
-    if (part.startsWith('`') && part.endsWith('`')) {
-      return (
-        <code
-          key={i}
-          className="px-1.5 py-0.5 rounded bg-[#0a1528] text-[#00d2ff] font-mono text-[0.85em] border border-[#1b2b4d]"
-        >
-          {part.slice(1, -1)}
-        </code>
-      );
-    }
-    return <span key={i}>{part}</span>;
-  });
+// Rich Markdown renderer with custom Tailwind styling for tables, lists, headers, etc.
+function FormattedMessage({ content, isUser }: { content: string; isUser: boolean }) {
+  if (!content) return null;
+  if (isUser) {
+    return <div className="whitespace-pre-wrap break-words">{content}</div>;
+  }
+
+  return (
+    <div className="prose-custom text-sm leading-relaxed overflow-hidden">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          h1: ({ children }) => (
+            <h1 className="text-base font-bold text-white mt-3 mb-1.5 pb-1 border-b border-slate-700/60">
+              {children}
+            </h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="text-sm font-bold text-white mt-3 mb-1.5">
+              {children}
+            </h2>
+          ),
+          h3: ({ children }) => (
+            <h3 className="text-xs font-bold text-[#00d2ff] uppercase tracking-wider mt-3 mb-1">
+              {children}
+            </h3>
+          ),
+          p: ({ children }) => (
+            <p className="mb-2.5 last:mb-0 leading-relaxed text-slate-900 dark:text-slate-100">
+              {children}
+            </p>
+          ),
+          ul: ({ children }) => (
+            <ul className="my-2 space-y-1 pl-4 list-disc marker:text-[#00d2ff]">
+              {children}
+            </ul>
+          ),
+          ol: ({ children }) => (
+            <ol className="my-2 space-y-1 pl-4 list-decimal marker:text-[#00d2ff]">
+              {children}
+            </ol>
+          ),
+          li: ({ children }) => (
+            <li className="leading-relaxed text-slate-800 dark:text-slate-200">
+              {children}
+            </li>
+          ),
+          strong: ({ children }) => (
+            <strong className="font-bold text-cyan-600 dark:text-cyan-300">
+              {children}
+            </strong>
+          ),
+          code: ({ children, className }) => {
+            const isInline = !className;
+            if (isInline) {
+              return (
+                <code className="px-1.5 py-0.5 rounded bg-[#0a1528] text-[#00d2ff] font-mono text-[0.85em] border border-[#1b2b4d]">
+                  {children}
+                </code>
+              );
+            }
+            return (
+              <pre className="my-2 p-3 rounded-lg bg-[#070e1b] text-slate-200 font-mono text-xs overflow-x-auto border border-[#1b2b4d]">
+                <code>{children}</code>
+              </pre>
+            );
+          },
+          table: ({ children }) => (
+            <div className="my-3 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+              <table className="w-full text-left text-xs border-collapse">
+                {children}
+              </table>
+            </div>
+          ),
+          thead: ({ children }) => (
+            <thead className="bg-slate-200/80 dark:bg-[#0c1830] text-slate-900 dark:text-[#00d2ff] font-bold border-b border-slate-300 dark:border-slate-700">
+              {children}
+            </thead>
+          ),
+          th: ({ children }) => (
+            <th className="px-3 py-2.5 font-bold tracking-wide">
+              {children}
+            </th>
+          ),
+          tbody: ({ children }) => (
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800/80">
+              {children}
+            </tbody>
+          ),
+          tr: ({ children }) => (
+            <tr className="even:bg-slate-50 dark:even:bg-slate-800/30 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors">
+              {children}
+            </tr>
+          ),
+          td: ({ children }) => (
+            <td className="px-3 py-2 text-slate-800 dark:text-slate-300 align-top">
+              {children}
+            </td>
+          ),
+          hr: () => (
+            <hr className="my-3 border-slate-200 dark:border-slate-700" />
+          ),
+          blockquote: ({ children }) => (
+            <blockquote className="border-l-2 border-[#00d2ff] pl-3 my-2 text-slate-600 dark:text-slate-400 italic">
+              {children}
+            </blockquote>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
 }
 
 export default function ChatPanel({ userId, isModal = false, onClose }: ChatPanelProps) {
@@ -54,7 +145,7 @@ export default function ChatPanel({ userId, isModal = false, onClose }: ChatPane
     {
       role: 'assistant',
       content:
-        "Hi Alex! I'm your **UrFuture Copilot**. I can help you analyze career fit, break down required skills, assess course prerequisites, or recommend next steps based on your verified knowledge. How can I guide you today?",
+        "Hi! I'm your **UrFuture Copilot**. I can help you analyze career fit, break down required skills, assess course prerequisites, or recommend next steps based on your verified knowledge. How can I guide you today?",
     },
   ]);
   const [input, setInput] = useState('');
@@ -126,8 +217,28 @@ export default function ChatPanel({ userId, isModal = false, onClose }: ChatPane
               };
               return next;
             });
+          } else if (eventType === 'error') {
+            setMessages((prev) => {
+              const next = [...prev];
+              next[next.length - 1] = {
+                role: 'assistant',
+                content: data.message || 'An error occurred while generating the response. Please try again.',
+              };
+              return next;
+            });
           } else if (eventType === 'done') {
             setConversationId(data.conversationId);
+            // Attach RAG citations to the last assistant message
+            if (data.citations && data.citations.length > 0) {
+              setMessages((prev) => {
+                const next = [...prev];
+                next[next.length - 1] = {
+                  ...next[next.length - 1],
+                  citations: data.citations,
+                };
+                return next;
+              });
+            }
           }
         }
       }
@@ -190,14 +301,14 @@ export default function ChatPanel({ userId, isModal = false, onClose }: ChatPane
             className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'} animate-[fadeIn_0.25s_ease-out]`}
           >
             <div
-              className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+              className={`max-w-[95%] sm:max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                 m.role === 'user'
-                  ? 'bg-gradient-to-r from-[#0284c7] to-[#0ea5e9] text-white font-medium shadow-md shadow-[#0284c7]/20 rounded-tr-sm'
+                  ? 'bg-gradient-to-r from-[#0284c7] to-[#0ea5e9] text-white font-medium shadow-md shadow-[#0284c7]/20 rounded-tr-sm self-end max-w-[85%]'
                   : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 shadow-sm rounded-tl-sm'
               }`}
             >
               {m.content ? (
-                <div className="whitespace-pre-wrap break-words">{renderContent(m.content)}</div>
+                <FormattedMessage content={m.content} isUser={m.role === 'user'} />
               ) : streaming && i === messages.length - 1 ? (
                 <div className="flex items-center gap-1.5 py-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#00d2ff] animate-bounce [animation-delay:-0.3s]" />
@@ -220,6 +331,11 @@ export default function ChatPanel({ userId, isModal = false, onClose }: ChatPane
                   </span>
                 ))}
               </div>
+            )}
+
+            {/* RAG Citations — collapsible sources list */}
+            {m.citations && m.citations.length > 0 && (
+              <CitationBlock citations={m.citations} />
             )}
           </div>
         ))}
@@ -286,7 +402,7 @@ export default function ChatPanel({ userId, isModal = false, onClose }: ChatPane
   if (isModal) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-sm">
-        <div className="w-full max-w-3xl h-[640px] max-h-[90vh] animate-[fadeIn_0.2s_ease-out]">
+        <div className="w-full max-w-4xl h-[700px] max-h-[90vh] animate-[fadeIn_0.2s_ease-out]">
           {content}
         </div>
       </div>
@@ -294,4 +410,46 @@ export default function ChatPanel({ userId, isModal = false, onClose }: ChatPane
   }
 
   return <div className="h-[600px]">{content}</div>;
+}
+
+// ---------------------------------------------------------------------------
+// Citation Block — collapsible "Sources" section under assistant messages
+// ---------------------------------------------------------------------------
+
+function CitationBlock({ citations }: { citations: { source: string; reference: string; claim: string }[] }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="mt-2 max-w-[85%]">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#00d2ff]/80 hover:text-[#00d2ff] transition-colors"
+      >
+        <BookOpen className="w-3 h-3" />
+        {citations.length} source{citations.length > 1 ? 's' : ''} cited
+        <ChevronDown className={`w-3 h-3 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+      </button>
+
+      {expanded && (
+        <div className="mt-1.5 space-y-1.5 animate-[fadeIn_0.15s_ease-out]">
+          {citations.map((c, i) => (
+            <div
+              key={i}
+              className="rounded-lg bg-[#091322] border border-[#162740] px-3 py-2 text-[11px]"
+            >
+              <div className="flex items-start gap-2">
+                <span className="shrink-0 w-4 h-4 rounded-full bg-[#00d2ff]/10 text-[#00d2ff] text-[9px] font-bold flex items-center justify-center mt-0.5">
+                  {i + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-slate-300 truncate">{c.source}</p>
+                  <p className="text-slate-500 mt-0.5 line-clamp-2">{c.claim}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }

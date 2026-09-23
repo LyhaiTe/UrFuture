@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
-import { runToolCall, ANALYZE_JOB_FIT_TOOL } from '@/lib/claude';
+import { runToolCall, ANALYZE_JOB_FIT_TOOL } from '@/lib/llm';
 import { BASE_SYSTEM_PROMPT, JOB_FIT_FUNCTION_INSTRUCTIONS } from '@/lib/prompts';
 import { getStudentSkillContext, formatStudentSkillsForPrompt } from '@/lib/knowledgeBase';
 import type { JobFitResult } from '@/types';
