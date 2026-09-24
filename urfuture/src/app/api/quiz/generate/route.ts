@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
-import { runGroqJson, runToolCall, GENERATE_QUIZ_TOOL } from '@/lib/claude';
 import { runToolCall, GENERATE_QUIZ_TOOL } from '@/lib/llm';
 import { BASE_SYSTEM_PROMPT, QUIZ_GENERATION_INSTRUCTIONS } from '@/lib/prompts';
 import { getParsedTranscripts } from '@/lib/knowledgeBase';
@@ -18,10 +17,10 @@ const bodySchema = z.object({
 
 /**
  * POST /api/quiz/generate
- * Implements the sticky-note feature: "AI Quiz that allow us to upload all
+ * Implements the feature: "AI Quiz that allow us to upload all
  * the class we took from year1-4 and give us a quiz to test our knowledge."
  * Pulls every PARSED transcript on file for the student (across all
- * years/grades) and asks Claude to build a diagnostic quiz strictly from
+ * years/grades) and builds a diagnostic quiz strictly from
  * courses that actually appear in those transcripts.
  */
 async function handlePost(req: NextRequest) {
@@ -63,18 +62,14 @@ async function handlePost(req: NextRequest) {
     ? `The student's selected major is "${selectedMajor.title}". Focus questions on knowledge relevant to this major and its required skills.`
     : 'No major has been selected; keep questions grounded in the uploaded coursework.';
   const userMessage = `${majorContext}\n\nHere are all of this student's transcripts on file:\n\n${courseSummary}\n\nGenerate ${questionCount ?? 10} diagnostic questions. Mix MULTIPLE_CHOICE, WRITTEN, and CODING. Return JSON only in this exact shape: {"questions":[{"questionType":"MULTIPLE_CHOICE|WRITTEN|CODING","skillName":"string","prompt":"string","choices":["string"],"correctIndex":0,"expectedAnswer":"string","difficulty":"EASY|MEDIUM|HARD","sourceCourse":"string"}]}. For written/coding questions, choices must contain the expected answer as its first item. Ground every question in a listed course.`;
+  
   let result: { questions: QuizGeneratedQuestion[] };
   try {
-    result = process.env.ANTHROPIC_API_KEY
-      ? await runToolCall<{ questions: QuizGeneratedQuestion[] }>({
-          system: `${BASE_SYSTEM_PROMPT}\n\n${QUIZ_GENERATION_INSTRUCTIONS}`,
-          userMessage,
-          tool: GENERATE_QUIZ_TOOL,
-        })
-      : await runGroqJson<{ questions: QuizGeneratedQuestion[] }>({
-          system: 'Return valid JSON only. The response must be an object with one key named questions. Each question must contain questionType, skillName, prompt, choices, correctIndex, difficulty, and sourceCourse. Use simple strings and numbers only.',
-          userMessage,
-        });
+    result = await runToolCall<{ questions: QuizGeneratedQuestion[] }>({
+      system: `${BASE_SYSTEM_PROMPT}\n\n${QUIZ_GENERATION_INSTRUCTIONS}`,
+      userMessage,
+      tool: GENERATE_QUIZ_TOOL,
+    });
   } catch (error) {
     console.warn('AI quiz generation failed; using grounded fallback questions:', error);
     result = { questions: buildFallbackQuestions(transcripts, questionCount ?? 8) };

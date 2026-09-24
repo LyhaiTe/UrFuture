@@ -211,12 +211,19 @@ export async function runToolCall<T>(opts: {
 }
 
 export async function runGroqJson<T>(opts: { system: string; userMessage: string }): Promise<T> {
-  if (!process.env.GROQ_API_KEY) throw new Error('Configure GROQ_API_KEY or ANTHROPIC_API_KEY in .env');
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey || apiKey.includes('...') || apiKey.includes('xxxx') || apiKey === 'gsk_...') {
+    throw new Error('Valid GROQ_API_KEY is not configured in .env');
+  }
+  const rawModel = process.env.LLM_MODEL?.trim();
+  const model = (!rawModel || rawModel.startsWith('openai/') || rawModel.includes('gpt-oss'))
+    ? 'llama-3.3-70b-versatile'
+    : rawModel;
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: process.env.LLM_MODEL || 'openai/gpt-oss-20b',
+      model,
       temperature: 0,
       response_format: { type: 'json_object' },
       messages: [{ role: 'system', content: opts.system }, { role: 'user', content: opts.userMessage }],
@@ -225,7 +232,7 @@ export async function runGroqJson<T>(opts: { system: string; userMessage: string
   const data = await response.json() as { choices?: Array<{ message?: { content?: string } }>; error?: { message?: string } };
   if (!response.ok) throw new Error(data.error?.message || `Groq request failed (${response.status})`);
   const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error('Groq returned an empty quiz response.');
+  if (!content) throw new Error('Groq returned an empty response.');
   return JSON.parse(content) as T;
 }
 

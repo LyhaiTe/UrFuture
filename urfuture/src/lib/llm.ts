@@ -7,11 +7,19 @@ import type { Tool as AnthropicTool } from '@anthropic-ai/sdk/resources/messages
 // Supports Groq, Claude (Anthropic), and a Graceful Local Dev Fallback
 // ---------------------------------------------------------------------------
 
-function isValidApiKey(key?: string): boolean {
+export function isValidApiKey(key?: string): boolean {
   if (!key) return false;
   const trimmed = key.trim();
   if (!trimmed) return false;
-  if (trimmed.includes('...') || trimmed.includes('xxxx') || trimmed.startsWith('sk-ant-xxx')) {
+  if (
+    trimmed.includes('...') ||
+    trimmed.includes('xxxx') ||
+    trimmed.startsWith('sk-ant-xxx') ||
+    trimmed.startsWith('your-') ||
+    trimmed === 'gsk_...' ||
+    trimmed === 'pa-...' ||
+    trimmed === 'sk-...'
+  ) {
     return false;
   }
   return true;
@@ -23,11 +31,11 @@ export function getActiveProvider(): 'groq' | 'anthropic' | 'fallback' {
   return 'fallback';
 }
 
+const rawModel = process.env.LLM_MODEL?.trim();
+const isGroq = isValidApiKey(process.env.GROQ_API_KEY);
 export const LLM_MODEL =
-  process.env.LLM_MODEL ||
-  (isValidApiKey(process.env.GROQ_API_KEY)
-    ? 'llama-3.3-70b-versatile'
-    : (process.env.CLAUDE_MODEL || 'claude-sonnet-4-6'));
+  (rawModel && !rawModel.startsWith('openai/') && !rawModel.includes('gpt-oss') ? rawModel : null) ||
+  (isGroq ? 'llama-3.3-70b-versatile' : (process.env.CLAUDE_MODEL || 'claude-sonnet-4-6'));
 
 // ---------------------------------------------------------------------------
 // Tool (function-calling) definitions — OpenAI-compatible format
