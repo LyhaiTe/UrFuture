@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { runGroqJson, runToolCall, GENERATE_QUIZ_TOOL } from '@/lib/claude';
+import { runToolCall, GENERATE_QUIZ_TOOL } from '@/lib/llm';
 import { BASE_SYSTEM_PROMPT, QUIZ_GENERATION_INSTRUCTIONS } from '@/lib/prompts';
 import { getParsedTranscripts } from '@/lib/knowledgeBase';
 import type { QuizGeneratedQuestion } from '@/types';

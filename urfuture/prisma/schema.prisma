@@ -309,6 +309,51 @@ model CounselorReview {
   @@index([counselorId])
 }
 
+// ---------------------------------------------------------------------------
+// RAG knowledge base: ingested unstructured documents (NEA survey PDFs,
+// ILOSTAT Cambodia wage data, university curricula, O*NET taxonomy notes)
+// chunked and embedded for retrieval. The `embedding` column itself is a
+// pgvector `vector(1536)` type added via raw SQL in the
+// `add_pgvector_knowledge_base` migration, since Prisma's schema language
+// has no native vector type — see that migration for the column + ivfflat
+// index definition. Treat `KnowledgeChunk.embedding` as present at the DB
+// level even though it isn't declared as a scalar field here.
+// ---------------------------------------------------------------------------
+
+enum KnowledgeCategory {
+  CAREER_OUTLOOK
+  ACADEMIC_SYLLABUS
+  SCHOLARSHIP
+  LABOR_STAT
+}
+
+model KnowledgeDocument {
+  id          String            @id @default(cuid())
+  title       String
+  source      String // e.g. "NEA_SURVEY_2024", "ILOSTAT_KH", "CADT_CURRICULUM"
+  category    KnowledgeCategory
+  url         String?
+  publishedAt DateTime?
+  createdAt   DateTime          @default(now())
+  chunks      KnowledgeChunk[]
+
+  @@index([category])
+  @@index([source])
+}
+
+model KnowledgeChunk {
+  id         String            @id @default(cuid())
+  documentId String
+  document   KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  content    String            @db.Text
+  chunkIndex Int
+  // { onetSocCode?, industry?, institution?, educationLevel? }
+  metadata   Json
+  createdAt  DateTime          @default(now())
+
+  @@index([documentId])
+}
+
 model Conversation {
   id        String    @id @default(cuid())
   userId    String

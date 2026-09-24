@@ -11,6 +11,10 @@ export interface Citation {
   claim: string; // the specific claim this citation supports
 }
 
+/** Alias used by the RAG layer (src/lib/rag.ts) for citations attached to
+ *  retrieved knowledge-base chunks. Same shape as Citation. */
+export type GroundingCitation = Citation;
+
 export interface SkillGapItem {
   skillName: string;
   userProficiency: number; // 0-100

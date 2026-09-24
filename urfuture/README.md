@@ -20,11 +20,12 @@ description to check your fit → get a prep plan if you're not qualified yet.**
 | Charts | Recharts (Skill Radar) |
 | Pathway graph | React Flow |
 | Backend | Next.js Route Handlers (REST, streamed via SSE for chat) |
-| Database | PostgreSQL 15+ on Amazon RDS + Prisma ORM |
+| Database | PostgreSQL 15+ with pgvector on Amazon RDS + Prisma ORM |
 | Object storage | Google Cloud Storage for transcript files (PDF, PNG, JPEG) |
-| AI | Claude API (`@anthropic-ai/sdk`) with tool use / function calling |
+| AI | Groq API (`groq-sdk`) with tool use / function calling |
+| Embeddings | Voyage AI (`voyage-large-2`) / OpenAI (`text-embedding-3-small`) |
 | Auth | Landing page + sign-in modal; demo login, email/password (prototype-only, unverified), and real **Google OAuth** — see §10 |
-| RAG (prototype) | Seeded Postgres tables carrying O*NET / NEA / ILOSTAT citation metadata (see §9 to wire up a real vector store) |
+| RAG | Vector search via `pgvector`, citations via cosine similarity |
 
 ---
 
@@ -35,7 +36,8 @@ Install these before cloning the project:
 - Node.js 20 or newer: https://nodejs.org
 - Docker Desktop with Docker Compose: https://www.docker.com/products/docker-desktop/
 - AWS account with an Amazon RDS for PostgreSQL instance for production
-- An Anthropic API key: https://console.anthropic.com
+- A Groq API key: https://console.groq.com/keys
+- A Voyage AI API key (for embeddings): https://dash.voyageai.com/
 - Git: https://git-scm.com/downloads
 
 Google OAuth, Pinecone, O*NET, and ILOSTAT credentials are optional for local
@@ -93,8 +95,9 @@ Copy-Item .env.example .env
 Open `.env` and set at least:
 
 ```env
-ANTHROPIC_API_KEY=your_anthropic_api_key
-DATABASE_URL="postgresql://advisor:advisor@localhost:5433/cambodia_advisor?schema=public"
+GROQ_API_KEY=your_groq_api_key
+VOYAGE_API_KEY=your_voyage_api_key
+DATABASE_URL="postgresql://advisor:advisor@localhost:5433/urfuture?schema=public"
 GCP_PROJECT_ID=your-google-cloud-project-id
 GCS_TRANSCRIPT_BUCKET=your-transcript-bucket-name
 ```
@@ -115,11 +118,11 @@ Make sure Docker Desktop is running, then run:
 docker compose up -d
 ```
 
-The compose file starts PostgreSQL on `localhost:5433` with these defaults:
+The compose file starts PostgreSQL with the `pgvector` extension on `localhost:5433` with these defaults:
 
 | Setting | Value |
 |---|---|
-| Database | `cambodia_advisor` |
+| Database | `urfuture` |
 | User | `advisor` |
 | Password | `advisor` |
 | Port | `5433` |
@@ -480,5 +483,6 @@ recheck scheme (`http` vs `https`), port, and trailing slash on both sides.
 ```bash
 npm run prisma:studio     # Visual DB browser — inspect CounselorReview queue, quiz results, etc.
 npm run prisma:migrate    # Create/apply a new migration after schema changes
+npm run measure:ttft      # Benchmark the time-to-first-token latency for chat
 npm run build && npm start   # Production build
 ```

@@ -10,7 +10,11 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:seed": "tsx prisma/seed.ts",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "rag:ingest": "tsx scripts/ingest-knowledge.ts",
+    "rag:ingest:dry-run": "tsx scripts/ingest-knowledge.ts --dry-run",
+    "verify:guardrails": "tsx scripts/verify-guardrails.ts",
+    "measure:ttft": "tsx scripts/measure-chat-ttft.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -20,18 +24,22 @@
     "@google-cloud/storage": "^7.22.0",
     "@prisma/client": "^5.22.0",
     "clsx": "^2.1.1",
+    "groq-sdk": "^1.6.0",
     "lucide-react": "^1.46.0",
     "next": "^14.2.35",
     "pdf-parse": "^1.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
     "reactflow": "^11.11.4",
     "recharts": "^2.12.7",
+    "remark-gfm": "^4.0.1",
     "uuid": "^9.0.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
+    "@types/pdf-parse": "^1.1.4",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@types/uuid": "^9.0.8",
