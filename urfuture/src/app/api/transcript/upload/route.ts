@@ -29,29 +29,45 @@ export async function POST(req: NextRequest) {
     const file = form.get('file') as File | null;
 
     if (!userId || !file) return NextResponse.json({ error: 'userId and file are required' }, { status: 400 });
-    if (!SUPPORTED_TYPES.has(file.type)) return NextResponse.json({ error: 'Only PDF, PNG, and JPEG transcripts are supported' }, { status: 400 });
+    const mimeType = getSupportedMimeType(file);
+    if (!mimeType) return NextResponse.json({ error: 'Only PDF, PNG, and JPEG transcripts are supported' }, { status: 400 });
     if (file.size > MAX_FILE_SIZE_BYTES) return NextResponse.json({ error: 'Transcript files must be 10 MB or smaller' }, { status: 400 });
 
     const bytes = Buffer.from(await file.arrayBuffer());
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const storageObjectKey = `transcripts/${userId}/${randomUUID()}-${safeName}`;
-    const storageUrl = await uploadTranscript(storageObjectKey, bytes, file.type);
+    const storageUrl = await uploadTranscript(storageObjectKey, bytes, mimeType);
     let rawText = bytes.toString('utf-8').slice(0, 20000);
-    if (file.type === 'application/pdf') {
-      const parsePdf = loadPdfParser();
-      const extracted = await parsePdf(bytes);
-      rawText = extracted.text.slice(0, 20000);
+    let pdfParseFailed = false;
+    if (mimeType === 'application/pdf') {
+      try {
+        const parsePdf = loadPdfParser();
+        const extracted = await parsePdf(bytes);
+        rawText = extracted.text.slice(0, 20000);
+      } catch (parseError) {
+        pdfParseFailed = true;
+        rawText = '';
+        console.warn('PDF text extraction failed; sending the original PDF to the vision model:', parseError);
+      }
     }
 
     const transcript = await prisma.transcript.create({
-      data: { userId, fileName: file.name, fileUrl: storageUrl, storageObjectKey, mimeType: file.type, fileSizeBytes: file.size, yearLabel, status: 'PARSING', rawText },
+      data: { userId, fileName: file.name, fileUrl: storageUrl, storageObjectKey, mimeType, fileSizeBytes: file.size, yearLabel, status: 'PARSING', rawText },
     });
     transcriptId = transcript.id;
 
-    const documentBlock = file.type === 'application/pdf'
-      ? { type: 'text' as const, text: rawText || 'No selectable text was found in this PDF.' }
-      : { type: 'image' as const, source: { type: 'base64' as const, media_type: file.type as 'image/png' | 'image/jpeg', data: bytes.toString('base64') } };
+    let documentBlock;
+    if (mimeType === 'application/pdf' && pdfParseFailed) {
+      documentBlock = { type: 'document' as const, source: { type: 'base64' as const, media_type: 'application/pdf' as const, data: bytes.toString('base64') } };
+    } else if (mimeType === 'application/pdf') {
+      documentBlock = { type: 'text' as const, text: rawText || 'No selectable text was found in this PDF.' };
+    } else {
+      documentBlock = { type: 'image' as const, source: { type: 'base64' as const, media_type: mimeType as 'image/png' | 'image/jpeg', data: bytes.toString('base64') } };
+    }
     const extractionPrompt = 'Extract the academic transcript. Return ONLY JSON with this shape: {"major": string|null, "courses": [{"courseCode": string|null, "courseName": string, "grade": string|number|null, "credits": number|null, "term": string|null, "knowledgeArea": string|null}]}. Use only information visible in the document. Do not invent courses or a major.';
+    if (pdfParseFailed && !process.env.ANTHROPIC_API_KEY) {
+      throw new Error('This PDF could not be read by the local parser. Configure ANTHROPIC_API_KEY to enable PDF vision fallback, or re-save the PDF and try again.');
+    }
     const jsonText = process.env.ANTHROPIC_API_KEY
       ? await extractWithAnthropic(documentBlock, rawText, extractionPrompt)
       : await extractWithGroq(rawText, extractionPrompt);
@@ -110,6 +126,15 @@ export async function POST(req: NextRequest) {
 function loadPdfParser() {
   const runtimeRequire = eval('require') as (moduleName: string) => (data: Buffer) => Promise<{ text: string }>;
   return runtimeRequire('pdf-parse/lib/pdf-parse.js');
+}
+
+function getSupportedMimeType(file: File) {
+  if (SUPPORTED_TYPES.has(file.type)) return file.type;
+  const extension = file.name.toLowerCase().split('.').pop();
+  if (extension === 'pdf') return 'application/pdf';
+  if (extension === 'png') return 'image/png';
+  if (extension === 'jpg' || extension === 'jpeg') return 'image/jpeg';
+  return null;
 }
 
 async function extractWithAnthropic(documentBlock: unknown, rawText: string, system: string) {
