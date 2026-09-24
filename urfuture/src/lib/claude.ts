@@ -7,7 +7,8 @@ import type { MessageParam, Tool } from '@anthropic-ai/sdk/resources/messages';
 export const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-5';
 
 export const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+  // Keep routes loadable when local development uses the configured Groq provider.
+  apiKey: process.env.ANTHROPIC_API_KEY || 'anthropic-key-configured-at-runtime',
 });
 
 // ---------------------------------------------------------------------------
@@ -149,7 +150,7 @@ export const ANALYZE_JOB_FIT_TOOL: Tool = {
 
 export const GENERATE_QUIZ_TOOL: Tool = {
   name: 'generate_quiz',
-  description: "Generate diagnostic multiple-choice questions strictly from the student's parsed transcript courses.",
+  description: "Generate diagnostic questions strictly from the student's parsed transcript courses. Mix multiple-choice, written-answer, and coding questions.",
   input_schema: {
     type: 'object',
     properties: {
@@ -158,14 +159,16 @@ export const GENERATE_QUIZ_TOOL: Tool = {
         items: {
           type: 'object',
           properties: {
+            questionType: { type: 'string', enum: ['MULTIPLE_CHOICE', 'WRITTEN', 'CODING'] },
             skillName: { type: 'string' },
             prompt: { type: 'string' },
             choices: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 6 },
             correctIndex: { type: 'number' },
+            expectedAnswer: { type: 'string' },
             difficulty: { type: 'string', enum: ['EASY', 'MEDIUM', 'HARD'] },
             sourceCourse: { type: 'string' },
           },
-          required: ['skillName', 'prompt', 'choices', 'correctIndex', 'difficulty'],
+          required: ['questionType', 'skillName', 'prompt', 'difficulty'],
         },
       },
     },
@@ -205,6 +208,25 @@ export async function runToolCall<T>(opts: {
     throw new Error('Claude did not return the expected tool call.');
   }
   return toolUse.input as T;
+}
+
+export async function runGroqJson<T>(opts: { system: string; userMessage: string }): Promise<T> {
+  if (!process.env.GROQ_API_KEY) throw new Error('Configure GROQ_API_KEY or ANTHROPIC_API_KEY in .env');
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: process.env.LLM_MODEL || 'openai/gpt-oss-20b',
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [{ role: 'system', content: opts.system }, { role: 'user', content: opts.userMessage }],
+    }),
+  });
+  const data = await response.json() as { choices?: Array<{ message?: { content?: string } }>; error?: { message?: string } };
+  if (!response.ok) throw new Error(data.error?.message || `Groq request failed (${response.status})`);
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error('Groq returned an empty quiz response.');
+  return JSON.parse(content) as T;
 }
 
 /**

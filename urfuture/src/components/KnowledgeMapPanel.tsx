@@ -1,1028 +1,115 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { FileUp, Sparkles } from 'lucide-react';
+import QuizPanel from '@/components/QuizPanel';
 
-interface KnowledgeMapPanelProps {
-  userId: string;
+interface Course {
+  courseCode?: string | null;
+  courseName?: string | null;
+  grade?: string | number | null;
+  knowledgeArea?: string | null;
 }
-
-type SkillStatus = 'Completed' | 'In Progress' | 'Incomplete';
 
 interface Skill {
-  id: string;
   name: string;
-  category: string;
-  progress: number;
-  status: SkillStatus;
-  description: string;
+  proficiency: number;
+  source: string;
 }
 
-interface QuizQuestion {
-  id: number;
-  question: string;
-  options: string[];
-  correctAnswer: number;
-}
+export default function KnowledgeMapPanel({ userId }: { userId: string }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [yearLabel, setYearLabel] = useState('Year 1');
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [major, setMajor] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
-const skills: Skill[] = [
-  {
-    id: 'programming',
-    name: 'Programming Fundamentals',
-    category: 'Software Engineering',
-    progress: 100,
-    status: 'Completed',
-    description:
-      'Core programming concepts, logic, variables, functions, and control flow.',
-  },
-  {
-    id: 'oop',
-    name: 'Object-Oriented Programming',
-    category: 'Software Engineering',
-    progress: 90,
-    status: 'Completed',
-    description:
-      'Classes, objects, inheritance, encapsulation, and polymorphism.',
-  },
-  {
-    id: 'database',
-    name: 'Database Systems',
-    category: 'Data',
-    progress: 82,
-    status: 'Completed',
-    description:
-      'Relational databases, SQL, schema design, and data management.',
-  },
-  {
-    id: 'dsa',
-    name: 'Data Structures & Algorithms',
-    category: 'Software Engineering',
-    progress: 68,
-    status: 'In Progress',
-    description:
-      'Arrays, linked structures, trees, graphs, searching, and sorting.',
-  },
-  {
-    id: 'cloud',
-    name: 'Cloud Computing',
-    category: 'Infrastructure',
-    progress: 55,
-    status: 'In Progress',
-    description:
-      'Cloud infrastructure, deployment, networking, and scalable services.',
-  },
-  {
-    id: 'ml',
-    name: 'Machine Learning',
-    category: 'AI & Data',
-    progress: 30,
-    status: 'Incomplete',
-    description:
-      'Data preparation, model training, evaluation, and predictive systems.',
-  },
-];
-
-const relationships = [
-  {
-    from: 'Programming Fundamentals',
-    to: 'Object-Oriented Programming',
-    label: 'Foundation',
-  },
-  {
-    from: 'Object-Oriented Programming',
-    to: 'Data Structures & Algorithms',
-    label: 'Builds into',
-  },
-  {
-    from: 'Database Systems',
-    to: 'Machine Learning',
-    label: 'Data foundation',
-  },
-  {
-    from: 'Data Structures & Algorithms',
-    to: 'Machine Learning',
-    label: 'Supports',
-  },
-  {
-    from: 'Programming Fundamentals',
-    to: 'Cloud Computing',
-    label: 'Supports',
-  },
-];
-
-const demoQuestions: QuizQuestion[] = [
-  {
-    id: 1,
-    question:
-      'Which of the following is a key principle of effective communication?',
-    options: ['Clarity', 'Complexity', 'Ambiguity', 'Repetition'],
-    correctAnswer: 0,
-  },
-  {
-    id: 2,
-    question: 'What does active listening involve?',
-    options: [
-      'Ignoring feedback',
-      'Preparing a response while someone speaks',
-      'Fully focusing on and understanding the speaker',
-      'Speaking more than the other person',
-    ],
-    correctAnswer: 2,
-  },
-  {
-    id: 3,
-    question: 'Which is an example of non-verbal communication?',
-    options: [
-      'Email',
-      'Body language',
-      'Report writing',
-      'Phone call',
-    ],
-    correctAnswer: 1,
-  },
-  {
-    id: 4,
-    question:
-      'What is the main purpose of feedback in communication?',
-    options: [
-      'To make communication longer',
-      'To confirm understanding and improve communication',
-      'To avoid discussion',
-      'To replace listening',
-    ],
-    correctAnswer: 1,
-  },
-  {
-    id: 5,
-    question: 'Which skill helps reduce misunderstandings?',
-    options: [
-      'Clear communication',
-      'Avoiding questions',
-      'Using complicated language',
-      'Ignoring feedback',
-    ],
-    correctAnswer: 0,
-  },
-];
-
-export default function KnowledgeMapPanel({
-  userId,
-}: KnowledgeMapPanelProps) {
-  const [selectedSkill, setSelectedSkill] =
-    useState<Skill | null>(null);
-
-  // Transcript
-  const [academicTerm, setAcademicTerm] = useState('Year 1');
-  const [transcriptFile, setTranscriptFile] =
-    useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [transcriptParsed, setTranscriptParsed] =
-    useState(false);
-
-  // Quiz
-  const [quizOpen, setQuizOpen] = useState(false);
-  const [quizLoading, setQuizLoading] = useState(false);
-  const [quizExpanded, setQuizExpanded] = useState(false);
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<
-    Record<number, number>
-  >({});
-  const [quizSubmitted, setQuizSubmitted] =
-    useState(false);
-
-  const completedSkills = skills.filter(
-    (skill) => skill.status === 'Completed'
-  ).length;
-
-  const inProgressSkills = skills.filter(
-    (skill) => skill.status === 'In Progress'
-  ).length;
-
-  const averageProgress = Math.round(
-    skills.reduce(
-      (total, skill) => total + skill.progress,
-      0
-    ) / skills.length
-  );
-
-  const getStatusClasses = (status: SkillStatus) => {
-    if (status === 'Completed') {
-      return 'bg-[#10b981]/10 text-[#34d399] border-[#10b981]/20';
-    }
-
-    if (status === 'In Progress') {
-      return 'bg-[#00d2ff]/10 text-[#00d2ff] border-[#00d2ff]/20';
-    }
-
-    return 'bg-slate-700/30 text-slate-400 border-slate-600/20';
-  };
-
-  // ============================================================
-  // FRONTEND-ONLY TRANSCRIPT PROCESSING
-  // ============================================================
-
-  async function handleUploadTranscript() {
-    if (!transcriptFile) return;
-
-    setUploading(true);
-    setTranscriptParsed(false);
-
-    // Frontend demo only.
-    // No API is called here.
-    await new Promise((resolve) =>
-      setTimeout(resolve, 800)
-    );
-
-    setTranscriptParsed(true);
-    setUploading(false);
-  }
-
-  // ============================================================
-  // GENERATE QUIZ
-  // Opens right panel immediately and loads there.
-  // ============================================================
-
-  async function handleGenerateQuiz() {
-    if (!transcriptParsed) return;
-
-    setQuizOpen(true);
-    setQuizLoading(true);
-    setQuizExpanded(false);
-
-    setCurrentQuestion(0);
-    setAnswers({});
-    setQuizSubmitted(false);
-
-    // Frontend demo generation.
-    await new Promise((resolve) =>
-      setTimeout(resolve, 1200)
-    );
-
-    setQuizLoading(false);
-  }
-
-  function selectAnswer(optionIndex: number) {
-    setAnswers((previous) => ({
-      ...previous,
-      [currentQuestion]: optionIndex,
-    }));
-  }
-
-  const score = demoQuestions.reduce(
-    (total, question, index) => {
-      if (
-        answers[index] === question.correctAnswer
-      ) {
-        return total + 1;
+  async function uploadTranscript() {
+    if (!file) return;
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const form = new FormData();
+      form.append('userId', userId);
+      form.append('yearLabel', yearLabel);
+      form.append('file', file);
+      const response = await fetch('/api/transcript/upload', { method: 'POST', body: form });
+      const responseText = await response.text();
+      let data: { error?: string; detail?: string; courses?: Course[]; detectedMajor?: string | null; transcript?: { parsedCourses?: Course[] } };
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        throw new Error(`Transcript service returned an unexpected response (${response.status}). Check the server logs.`);
       }
-
-      return total;
-    },
-    0
-  );
-
-  // ============================================================
-  // UPLOAD CARD
-  // ============================================================
-
-  const uploadCard = (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#34d399]" />
-
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-              Upload Coursework Transcripts
-            </h3>
-          </div>
-
-          <p className="text-[11px] text-slate-700 dark:text-slate-300 mt-1">
-            Add your coursework transcript before generating
-            a diagnostic quiz.
-          </p>
-        </div>
-
-        {transcriptParsed && (
-          <span className="px-3 py-1 rounded-full bg-[#10b981]/10 border border-[#10b981]/30 text-[10px] font-bold text-[#34d399]">
-            Transcript Ready
-          </span>
-        )}
-      </div>
-      <div className="mt-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 sm:p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#00d2ff]" />
-              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-50">
-                Upload Coursework Transcripts
-              </h3>
-            </div>
-            <p className="text-xs text-slate-700 dark:text-slate-200 mt-2">
-              Upload transcripts from Year 1–4 to generate tailored diagnostic quizzes and verify your skills.
-            </p>
-          </div>
-          <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#10b981]/10 border border-[#10b981]/30 text-[10px] font-bold text-[#34d399] shrink-0">
-            AI Auto-Extraction
-          </span>
-        </div>
-
-      <div className="mt-5 grid grid-cols-1 xl:grid-cols-[120px_minmax(0,1fr)] gap-4">
-        {/* Academic Term */}
-
-        <div>
-          <label className="block text-[10px] uppercase tracking-wider font-semibold text-slate-800 dark:text-slate-300 mb-2">
-            Academic Term
-          </label>
-
-          <select
-            value={academicTerm}
-            onChange={(event) =>
-              setAcademicTerm(event.target.value)
-            }
-            className="w-full h-11 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 px-3 text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 dark:focus:ring-cyan-900/40"
-          >
-            <option>Year 1</option>
-            <option>Year 2</option>
-            <option>Year 3</option>
-            <option>Year 4</option>
-          </select>
-        </div>
-
-        {/* Transcript */}
-
-        <div>
-          <label className="block text-[10px] uppercase tracking-wider font-semibold text-slate-800 dark:text-slate-300 mb-2">
-            Transcript File
-          </label>
-
-          <label className="h-11 flex items-center justify-between gap-3 rounded-lg bg-white dark:bg-slate-950 border border-dashed border-slate-300 dark:border-slate-700 px-4 cursor-pointer hover:border-cyan-500 transition-colors">
-            <span className="text-xs text-slate-600 dark:text-slate-400 truncate">
-              {transcriptFile
-                ? transcriptFile.name
-                : 'Select transcript PDF...'}
-            </span>
-
-            <span className="text-xs font-bold text-[#00d2ff]">
-              Browse
-            </span>
-
-            <input
-              type="file"
-              accept=".pdf"
-              className="hidden"
-              onChange={(event) => {
-                const file =
-                  event.target.files?.[0] ?? null;
-
-                setTranscriptFile(file);
-                setTranscriptParsed(false);
-                setQuizOpen(false);
-                setQuizExpanded(false);
-              }}
-            />
-          </label>
-        </div>
-      </div>
-
-      {/* Buttons */}
-
-      <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
-        <button
-          type="button"
-          onClick={handleUploadTranscript}
-          disabled={!transcriptFile || uploading}
-          className="transcript-action h-11 px-5 rounded-lg bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-600 disabled:bg-slate-200 disabled:text-slate-700 disabled:border disabled:border-slate-300 disabled:cursor-not-allowed text-white text-xs font-semibold transition-all"
-        >
-          {uploading
-            ? 'Processing...'
-            : 'Upload & Parse'}
-        </button>
-
-        <button
-          type="button"
-          onClick={handleGenerateQuiz}
-          disabled={!transcriptParsed}
-          className="transcript-action h-11 px-5 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-700 disabled:border disabled:border-slate-300 disabled:cursor-not-allowed text-white text-xs font-semibold transition-all shadow-lg shadow-slate-900/10"
-        >
-          Generate Quiz
-        </button>
-      </div>
-
-      <div className="mt-3 flex items-center gap-2">
-        <span
-          className={`w-1.5 h-1.5 rounded-full ${
-            transcriptParsed
-              ? 'bg-[#34d399]'
-              : 'bg-slate-600'
-          }`}
-        />
-
-        <p className="text-[10px] text-slate-600 dark:text-slate-400">
-          {transcriptParsed
-            ? 'Transcript processed. You can now generate your quiz.'
-            : 'Upload and process a transcript to enable Generate Quiz.'}
-        </p>
-      </div>
-      </div>
-    </div>
-  );
-
-  // ============================================================
-  // KNOWLEDGE MAP
-  // ============================================================
-
-  const knowledgeMapContent = (
-    <div className="space-y-6">
-      {uploadCard}
-
-      <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 sm:p-6">
-        {/* Header */}
-
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#00d2ff]" />
-
-              <h2 className="text-lg font-semibold text-slate-900">
-                Knowledge Map
-              </h2>
-            </div>
-
-            <p className="text-xs text-slate-600 mt-2">
-              Track your verified skills, knowledge areas,
-              relationships, and learning progress.
-            </p>
-          </div>
-
-          <div className="px-3 py-1.5 rounded-full bg-[#00d2ff]/10 border border-[#00d2ff]/30">
-            <span className="text-xs font-bold text-[#00d2ff]">
-              {averageProgress}% overall coverage
-            </span>
-          </div>
-        </div>
-
-        {/* Summary */}
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
-            <p className="text-xs uppercase tracking-wider text-slate-800 dark:text-slate-300 font-semibold">
-              Skills Mapped
-            </p>
-
-            <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
-              {skills.length}
-            </p>
-
-            <p className="text-xs text-slate-700 dark:text-slate-200 mt-1">
-              Verified competencies
-            </p>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
-            <p className="text-xs uppercase tracking-wider text-slate-800 dark:text-slate-300 font-semibold">
-              Completed
-            </p>
-
-            <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
-              {completedSkills}
-            </p>
-
-            <p className="text-xs text-slate-700 dark:text-slate-200 mt-1">
-              Strong competencies
-            </p>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
-            <p className="text-xs uppercase tracking-wider text-slate-800 dark:text-slate-300 font-semibold">
-              In Progress
-            </p>
-
-            <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
-              {inProgressSkills}
-            </p>
-
-            <p className="text-xs text-slate-700 dark:text-slate-200 mt-1">
-              Currently developing
-            </p>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
-            <p className="text-xs uppercase tracking-wider text-slate-800 dark:text-slate-300 font-semibold">
-              Overall Progress
-            </p>
-
-            <p className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
-              {averageProgress}%
-            </p>
-
-            <div className="mt-2 h-1.5 bg-[#17253d] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-[#00d2ff] to-[#34d399] rounded-full"
-                style={{
-                  width: `${averageProgress}%`,
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Skills */}
-
-        <div className="mt-8">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-            Skills & Knowledge Areas
-          </h3>
-
-          <p className="text-xs text-slate-700 dark:text-slate-200 mt-1 mb-4">
-            Select a skill to view more information.
-          </p>
-
-          <div
-            className={`grid grid-cols-1 ${
-              quizOpen && !quizExpanded
-                ? ''
-                : 'md:grid-cols-2'
-            } gap-4`}
-          >
-            {skills.map((skill) => {
-              const isSelected =
-                selectedSkill?.id === skill.id;
-
-              return (
-                <button
-                  type="button"
-                  key={skill.id}
-                  onClick={() =>
-                    setSelectedSkill(
-                      isSelected ? null : skill
-                    )
-                  }
-                  className={`text-left bg-white dark:bg-slate-900 border rounded-xl p-4 transition-all ${
-                    isSelected
-                      ? 'border-[#00d2ff]'
-                      : 'border-[#1b2947] hover:border-[#00d2ff]/40'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-                        {skill.name}
-                      </h4>
-
-                      <p className="text-xs text-slate-700 dark:text-slate-200 mt-1">
-                        {skill.category}
-                      </p>
-                    </div>
-
-                    <span
-                      className={`text-[10px] font-bold px-2 py-1 rounded-full border ${getStatusClasses(
-                        skill.status
-                      )}`}
-                    >
-                      {skill.status}
-                    </span>
-                  </div>
-
-                  <div className="mt-4">
-                    <div className="flex justify-between mb-2">
-                      <span className="text-xs text-slate-700 dark:text-slate-200">
-                        Competency
-                      </span>
-
-                      <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                        {skill.progress}%
-                      </span>
-                    </div>
-
-                    <div className="h-1.5 bg-[#17253d] rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-[#00d2ff] to-[#34d399] rounded-full"
-                        style={{
-                          width: `${skill.progress}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {isSelected && (
-                    <div className="mt-4 pt-4 border-t border-[#1b2947]">
-                      <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
-                        {skill.description}
-                      </p>
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Skill Relationships */}
-
-        <div className="mt-8">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-            Skill Relationships
-          </h3>
-
-          <p className="text-xs text-slate-700 dark:text-slate-200 mt-1 mb-4">
-            See how your knowledge areas build on and
-            support one another.
-          </p>
-
-          <div className="bg-[#09111f] border border-[#1b2947] rounded-xl p-5">
-            <div className="space-y-3">
-              {relationships.map(
-                (relationship, index) => (
-                  <div
-                    key={index}
-                    className="grid grid-cols-[1fr_auto_1fr] items-center gap-3"
-                  >
-                    <div className="bg-[#0d1526] border border-[#1b2947] rounded-lg p-3">
-                      <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                        {relationship.from}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-col items-center min-w-[70px]">
-                      <span className="text-[9px] text-slate-500 mb-1">
-                        {relationship.label}
-                      </span>
-
-                      <span className="text-[#34d399]">
-                        →
-                      </span>
-                    </div>
-
-                    <div className="bg-[#0d1526] border border-[#1b2947] rounded-lg p-3">
-                      <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                        {relationship.to}
-                      </span>
-                    </div>
-                  </div>
-                )
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Recommended Next Step */}
-
-        <div className="mt-6 bg-gradient-to-r from-[#00d2ff]/5 to-[#34d399]/5 border border-[#00d2ff]/20 rounded-xl p-5">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <p className="text-[10px] uppercase tracking-wider font-bold text-[#00d2ff]">
-                Recommended Next Step
-              </p>
-
-              <h3 className="text-sm font-bold text-white mt-1">
-                Strengthen Data Structures & Algorithms
-              </h3>
-
-              <p className="text-xs text-slate-400 mt-1">
-                Improving this competency will strengthen
-                your foundation for Machine Learning and
-                advanced software engineering.
-              </p>
-            </div>
-
-            <span className="px-3 py-1.5 rounded-lg bg-[#00d2ff]/10 border border-[#00d2ff]/30 text-xs font-bold text-[#00d2ff] shrink-0">
-              68% complete
-            </span>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-
-  // ============================================================
-  // QUIZ PANEL
-  // ============================================================
-
-  const currentQuizQuestion =
-    demoQuestions[currentQuestion];
-
-  const quizPanel = (
-    <section className="bg-[#0d1526] border border-[#1b2947] rounded-xl overflow-hidden min-h-[600px]">
-      {/* Quiz Header */}
-
-      <div className="flex items-center justify-between gap-4 p-5 border-b border-[#1b2947]">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#00d2ff]" />
-
-            <h2 className="text-lg font-bold text-white">
-              Diagnostic Knowledge Quiz
-            </h2>
-          </div>
-
-          <p className="text-xs text-slate-400 mt-1">
-            Based on your uploaded coursework.
-          </p>
-        </div>
-
-        {/* <> Toggle */}
-
-        <button
-          type="button"
-          onClick={() =>
-            setQuizExpanded((previous) => !previous)
-          }
-          title={
-            quizExpanded
-              ? 'Return to split screen'
-              : 'Full screen quiz'
-          }
-          className="h-10 min-w-12 px-3 flex items-center justify-center rounded-lg border border-[#00d2ff]/40 text-[#00d2ff] hover:bg-[#00d2ff]/10 transition-colors font-bold text-sm"
-        >
-          &lt;&gt;
-        </button>
-      </div>
-
-      {/* Loading appears HERE on the right */}
-
-      {quizLoading ? (
-        <div className="min-h-[500px] flex flex-col items-center justify-center p-8 text-center">
-          <div className="w-12 h-12 rounded-full border-4 border-[#1b2947] border-t-[#00d2ff] animate-spin" />
-
-          <h3 className="text-base font-bold text-white mt-6">
-            Generating your quiz...
-          </h3>
-
-          <p className="text-xs text-slate-400 mt-2 max-w-xs">
-            Analyzing your uploaded coursework and
-            preparing diagnostic questions.
-          </p>
-
-          <div className="mt-6 w-full max-w-xs h-1.5 rounded-full bg-[#17253d] overflow-hidden">
-            <div className="h-full w-2/3 bg-gradient-to-r from-[#00d2ff] to-[#34d399] rounded-full animate-pulse" />
-          </div>
-        </div>
-      ) : quizSubmitted ? (
-        /* Results */
-
-        <div className="min-h-[500px] flex flex-col items-center justify-center p-8 text-center">
-          <div className="w-24 h-24 rounded-full bg-[#00d2ff]/10 border border-[#00d2ff]/30 flex items-center justify-center">
-            <span className="text-2xl font-extrabold text-[#00d2ff]">
-              {Math.round(
-                (score / demoQuestions.length) * 100
-              )}
-              %
-            </span>
-          </div>
-
-          <h3 className="text-xl font-bold text-white mt-5">
-            Quiz Complete
-          </h3>
-
-          <p className="text-sm text-slate-400 mt-2">
-            You answered {score} of{' '}
-            {demoQuestions.length} questions correctly.
-          </p>
-
-          <div className="grid grid-cols-2 gap-3 w-full max-w-sm mt-6">
-            <div className="bg-[#09111f] border border-[#1b2947] rounded-xl p-4">
-              <p className="text-2xl font-bold text-[#34d399]">
-                {score}
-              </p>
-
-              <p className="text-[10px] text-slate-500 mt-1">
-                Correct
-              </p>
-            </div>
-
-            <div className="bg-[#09111f] border border-[#1b2947] rounded-xl p-4">
-              <p className="text-2xl font-bold text-slate-300">
-                {demoQuestions.length - score}
-              </p>
-
-              <p className="text-[10px] text-slate-500 mt-1">
-                To Review
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              setCurrentQuestion(0);
-              setAnswers({});
-              setQuizSubmitted(false);
-            }}
-            className="mt-6 px-5 py-2.5 rounded-lg bg-[#00d2ff] hover:bg-[#00bfe6] text-[#070d1a] text-xs font-bold transition-colors"
-          >
-            Retake Quiz
-          </button>
-        </div>
-      ) : (
-        /* Quiz */
-
-        <div className="p-5 sm:p-7">
-          {/* Progress */}
-
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400">
-              Question {currentQuestion + 1} of{' '}
-              {demoQuestions.length}
-            </span>
-
-            <span className="text-xs font-bold text-[#00d2ff]">
-              {Math.round(
-                ((currentQuestion + 1) /
-                  demoQuestions.length) *
-                  100
-              )}
-              %
-            </span>
-          </div>
-
-          <div className="mt-3 h-1.5 bg-[#17253d] rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-[#00d2ff] to-[#34d399] rounded-full transition-all duration-300"
-              style={{
-                width: `${
-                  ((currentQuestion + 1) /
-                    demoQuestions.length) *
-                  100
-                }%`,
-              }}
-            />
-          </div>
-
-          {/* Question */}
-
-          <h3 className="text-lg font-semibold text-white leading-relaxed mt-7">
-            {currentQuizQuestion.question}
-          </h3>
-
-          {/* Answers */}
-
-          <div className="space-y-3 mt-6">
-            {currentQuizQuestion.options.map(
-              (option, optionIndex) => {
-                const selected =
-                  answers[currentQuestion] ===
-                  optionIndex;
-
-                return (
-                  <button
-                    type="button"
-                    key={optionIndex}
-                    onClick={() =>
-                      selectAnswer(optionIndex)
-                    }
-                    className={`w-full flex items-center gap-3 text-left p-4 rounded-xl border transition-all ${
-                      selected
-                        ? 'border-[#00d2ff] bg-[#00d2ff]/10'
-                        : 'border-[#1b2947] bg-[#09111f] hover:border-[#00d2ff]/40'
-                    }`}
-                  >
-                    <span
-                      className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold ${
-                        selected
-                          ? 'bg-[#00d2ff] text-[#070d1a]'
-                          : 'bg-[#17253d] text-slate-400'
-                      }`}
-                    >
-                      {String.fromCharCode(
-                        65 + optionIndex
-                      )}
-                    </span>
-
-                    <span
-                      className={`text-sm ${
-                        selected
-                          ? 'text-white'
-                          : 'text-slate-300'
-                      }`}
-                    >
-                      {option}
-                    </span>
-                  </button>
-                );
-              }
-            )}
-          </div>
-
-          {/* Question navigation numbers */}
-
-          <div className="mt-7 pt-5 border-t border-[#1b2947]">
-            <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-3">
-              Questions
-            </p>
-
-            <div className="flex flex-wrap gap-2">
-              {demoQuestions.map((_, index) => {
-                const active =
-                  currentQuestion === index;
-
-                const answered =
-                  answers[index] !== undefined;
-
-                return (
-                  <button
-                    type="button"
-                    key={index}
-                    onClick={() =>
-                      setCurrentQuestion(index)
-                    }
-                    className={`w-8 h-8 rounded-lg text-[10px] font-bold border transition-all ${
-                      active
-                        ? 'bg-[#00d2ff] border-[#00d2ff] text-[#070d1a]'
-                        : answered
-                        ? 'bg-[#10b981]/10 border-[#10b981]/30 text-[#34d399]'
-                        : 'bg-[#09111f] border-[#1b2947] text-slate-500'
-                    }`}
-                  >
-                    {index + 1}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Previous / Next */}
-
-          <div className="flex items-center justify-between gap-3 mt-7">
-            <button
-              type="button"
-              disabled={currentQuestion === 0}
-              onClick={() =>
-                setCurrentQuestion((previous) =>
-                  Math.max(previous - 1, 0)
-                )
-              }
-              className="px-4 py-2.5 rounded-lg border border-[#263858] text-xs font-bold text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:border-[#00d2ff]/50 transition-colors"
-            >
-              Previous
-            </button>
-
-            {currentQuestion <
-            demoQuestions.length - 1 ? (
-              <button
-                type="button"
-                disabled={
-                  answers[currentQuestion] ===
-                  undefined
-                }
-                onClick={() =>
-                  setCurrentQuestion(
-                    (previous) => previous + 1
-                  )
-                }
-                className="px-5 py-2.5 rounded-lg bg-[#00d2ff] hover:bg-[#00bfe6] disabled:opacity-30 disabled:cursor-not-allowed text-[#070d1a] text-xs font-bold transition-colors"
-              >
-                Next
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled={
-                  answers[currentQuestion] ===
-                  undefined
-                }
-                onClick={() =>
-                  setQuizSubmitted(true)
-                }
-                className="px-5 py-2.5 rounded-lg bg-[#34d399] hover:bg-[#2fc28c] disabled:opacity-30 disabled:cursor-not-allowed text-[#070d1a] text-xs font-bold transition-colors"
-              >
-                Submit Quiz
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-    </section>
-  );
-
-  // ============================================================
-  // PAGE LAYOUT
-  // ============================================================
-
-  if (!quizOpen) {
-    return knowledgeMapContent;
+      if (!response.ok) throw new Error(data.detail ? `${data.error || 'Transcript parsing failed'}: ${data.detail}` : data.error || 'Transcript parsing failed');
+      const parsedCourses = data.courses ?? data.transcript?.parsedCourses ?? [];
+      setCourses(parsedCourses);
+      setMajor(data.detectedMajor ?? null);
+      setSkills(parsedCourses.map((course: Course) => ({
+        name: course.knowledgeArea || course.courseName || course.courseCode || 'Course knowledge',
+        proficiency: gradeToScore(course.grade),
+        source: 'TRANSCRIPT',
+      })));
+      setMessage(`Parsed ${parsedCourses.length} course${parsedCourses.length === 1 ? '' : 's'} from ${file.name}.`);
+      setFile(null);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Transcript parsing failed');
+    } finally {
+      setBusy(false);
+    }
   }
 
-  // Full-width quiz
-  if (quizExpanded) {
-    return (
-      <div className="w-full transition-all duration-300">
-        {quizPanel}
-      </div>
-    );
-  }
+  const average = skills.length ? Math.round(skills.reduce((sum, skill) => sum + skill.proficiency, 0) / skills.length) : 0;
 
-  // Split screen
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start transition-all duration-300">
-      {/* LEFT */}
-      <div className="min-w-0">
-        {knowledgeMapContent}
-      </div>
+    <div className="space-y-6">
+      <section className="card-dark border-[#1b2947] bg-[#0c1426] p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="flex items-center gap-2 text-lg font-bold text-white"><FileUp className="h-5 w-5 text-[#00d2ff]" /> Knowledge Map</h1>
+            <p className="mt-1 text-xs text-slate-400">Upload real transcripts to map completed courses, grades, and knowledge gaps.</p>
+          </div>
+          {major && <span className="rounded-full border border-[#00d2ff]/30 bg-[#00d2ff]/10 px-3 py-1 text-xs font-semibold text-[#00d2ff]">Detected major: {major}</span>}
+        </div>
 
-      {/* RIGHT */}
-      <div className="min-w-0 xl:sticky xl:top-6">
-        {quizPanel}
-      </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-[140px_1fr_auto] sm:items-end">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Academic term
+            <select value={yearLabel} onChange={(event) => setYearLabel(event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#1b2b4c] bg-[#0e172a] px-3 text-xs text-slate-200 outline-none focus:border-[#00d2ff]">
+              {['Year 1', 'Year 2', 'Year 3', 'Year 4'].map((year) => <option key={year}>{year}</option>)}
+            </select>
+          </label>
+          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Transcript PDF or image
+            <span className="mt-1 flex h-10 cursor-pointer items-center rounded-lg border border-dashed border-[#1b2b4c] bg-[#0e172a] px-3 text-xs text-slate-300 hover:border-[#00d2ff]">{file?.name || 'Choose transcript'}
+              <input type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" className="hidden" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+            </span>
+          </label>
+          <button onClick={uploadTranscript} disabled={!file || busy} className="h-10 rounded-lg bg-[#00d2ff] px-4 text-xs font-bold text-[#080d1a] disabled:opacity-40">{busy ? 'Parsing...' : 'Upload & Parse'}</button>
+        </div>
+        {message && <p className="mt-3 text-xs text-[#34d399]">{message}</p>}
+        {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
+      </section>
+
+      <section className="card-dark border-[#1b2947] bg-[#0c1426] p-6">
+        <div className="flex items-center justify-between"><div><h2 className="flex items-center gap-2 text-base font-bold text-white"><Sparkles className="h-4 w-4 text-[#34d399]" /> Your knowledge areas</h2><p className="mt-1 text-xs text-slate-400">Scores start from transcript grades and are refined after each quiz.</p></div><span className="text-2xl font-extrabold text-[#34d399]">{average}%</span></div>
+        {skills.length === 0 ? <p className="mt-6 rounded-lg border border-dashed border-[#1b2947] p-6 text-center text-xs text-slate-500">Upload a transcript to generate your first map.</p> : <div className="mt-5 grid gap-3 sm:grid-cols-2">{skills.map((skill) => <div key={skill.name} className="rounded-lg border border-[#1b2947] bg-[#091120] p-4"><div className="flex justify-between gap-3 text-xs"><span className="font-semibold text-white">{skill.name}</span><span className="text-[#34d399]">{skill.proficiency}%</span></div><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#17253d]"><div className="h-full rounded-full bg-gradient-to-r from-[#00d2ff] to-[#34d399]" style={{ width: `${skill.proficiency}%` }} /></div><span className="mt-2 block text-[10px] text-slate-500">{skill.source === 'TRANSCRIPT' ? 'Transcript evidence' : 'Quiz evidence'}</span></div>)}</div>}
+      </section>
+
+      {courses.length > 0 && <section className="card-dark border-[#1b2947] bg-[#0c1426] p-6"><h2 className="text-base font-bold text-white">Mapped courses</h2><div className="mt-4 grid gap-2 sm:grid-cols-2">{courses.map((course, index) => <div key={`${course.courseCode || course.courseName}-${index}`} className="flex justify-between rounded-lg border border-[#1b2947] bg-[#091120] p-3 text-xs"><span className="text-slate-300">{course.courseCode ? `${course.courseCode} · ` : ''}{course.courseName || 'Unnamed course'}</span><span className="font-semibold text-[#00d2ff]">{course.grade ?? 'No grade'}</span></div>)}</div></section>}
+      <QuizPanel userId={userId} />
     </div>
   );
+}
+
+function gradeToScore(grade: Course['grade']) {
+  const normalized = String(grade ?? '').toUpperCase();
+  if (normalized.startsWith('A')) return 90;
+  if (normalized.startsWith('B')) return 75;
+  if (normalized.startsWith('C')) return 60;
+  if (normalized.startsWith('D')) return 45;
+  const numeric = Number(grade);
+  return Number.isFinite(numeric) ? Math.max(0, Math.min(100, numeric)) : 50;
 }
