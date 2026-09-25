@@ -2,42 +2,63 @@
 
 **Spec**: [spec.md](spec.md)
 
-## Existing Surface
+## Surface Architecture
 
-- UI: `src/components/ChatPanel.tsx`
-- API: `src/app/api/chat/route.ts`
-- Provider: `src/lib/claude.ts`
-- Prompt and safety rules: `src/lib/prompts.ts`, `src/lib/guardrails.ts`
-- Persistence: `Conversation` and `Message` in `prisma/schema.prisma`
+- **UI Component**: `src/components/ChatPanel.tsx`
+- **Chat Streaming Route**: `src/app/api/chat/route.ts`
+- **Conversation List & Hydration**: `src/app/api/chat/conversations/route.ts`
+- **Individual Conversation Route**: `src/app/api/chat/conversations/[id]/route.ts`
+- **Prompt & Guardrails**: `src/lib/prompts.ts`, `src/lib/guardrails.ts`, `src/lib/knowledgeBase.ts`
+- **Database Models**: `Conversation`, `Message`, `CounselorReview`, `UserSkill`, `Transcript`, `User` in `prisma/schema.prisma`
 
-## Delivery Steps
+---
 
-### IDC-1: Secure Conversation Boundary
+## Phase Breakdown
 
-Add server session lookup, conversation ownership checks, request validation, message length limits, and redacted error logging. Migrate `ChatPanel` away from trusting a localStorage-supplied user ID.
+### Phase 1: Conversation Lifecycle & History Hydration
+1. **API Endpoints**:
+   - `GET /api/chat/conversations?userId=...`: Returns user profile, conversation summaries (ordered by `updatedAt DESC`), and pre-hydrated messages for the active conversation.
+   - `POST /api/chat/conversations`: Allows explicit thread initialization.
+   - `GET /api/chat/conversations/[id]`: Returns message history for a specific thread.
+   - `DELETE /api/chat/conversations/[id]`: Deletes conversation with cascade deletion of related messages.
+2. **UI Hydration**:
+   - Integrate `useEffect` on `ChatPanel.tsx` mount to load the active conversation.
+   - Add "New Chat" button to reset state and load a personalized greeting.
+   - Add "History" dropdown to list, switch, and delete conversation threads.
 
-**Exit**: unauthenticated requests return 401 and foreign conversation IDs return 403/404.
+### Phase 2: Student Context Enrichment & Prompt Personalization
+1. **Context Extraction**:
+   - Query user details (`name`, `educationLevel`, `university`, `institution`, `selectedMajor`).
+   - Query `UserSkill` via `getStudentSkillContext(userId)` to extract top verified proficiencies.
+   - Query `Transcript` via `getParsedTranscripts(userId)` to calculate cumulative GPA and extract completed courses (course codes, titles, grades, credits).
+2. **Prompt Injection**:
+   - Assemble a compact `STUDENT PROFILE & ACADEMIC CONTEXT` block inside `src/app/api/chat/route.ts`.
+   - Update `BASE_SYSTEM_PROMPT` in `src/lib/prompts.ts` with explicit rules instructing Claude to synthesize the student's courses and GPA when answering prerequisite, timeline, or career questions.
 
-### IDC-2: Reliable Streaming
+### Phase 3: High-Stakes Guardrails & Counselor Escalation
+1. **Keyword Triggers**:
+   - Expand `HIGH_STAKES_KEYWORDS` in `src/types/index.ts` to include `academic probation`, `faculty transfer`, `switch faculty`, and `dropout` variations.
+2. **Database Logging**:
+   - When `containsHighStakesSignal(message)` evaluates to `true`, insert a row into `prisma.counselorReview` with `status: 'PENDING'`.
+3. **Real-Time Notification**:
+   - Transmit an `event: high_stakes_alert` SSE event down the stream.
+   - Display an advisory banner in `ChatPanel.tsx` notifying the student that an advisor review ticket has been created.
 
-Define and validate the SSE event contract. Handle provider timeouts, stream cancellation, malformed events, partial responses, retry, and persistence only after a successful assistant completion.
+### Phase 4: Markdown Fidelity, Code Copying & Citations
+1. **Full GFM Markdown**:
+   - Configure `ReactMarkdown` with `remark-gfm` in `ChatPanel.tsx`.
+   - Add styling for headings (`h1`-`h4`), blockquotes, horizontal rules, and tables.
+   - Ensure markdown links (`a`) render as clickable external links (`target="_blank"`).
+2. **Interactive CodeBlock Component**:
+   - Add syntax container with language badge and a clipboard copy button with transient "Copied!" feedback.
+3. **Citations Pill & Tray**:
+   - Persist RAG grounding citations into `Message.citations`.
+   - Render a collapsible citation badge (`📚 X verified sources`) displaying source metadata and quoted claim excerpts.
 
-**Exit**: mocked provider tests cover token streaming, tool traces, completion, and failure.
-
-### IDC-3: Grounded Copilot Behavior
-
-Pass authorized student context into the prompt, sanitize tool traces, enforce guardrails, and create a counselor review for high-stakes requests. Add visible advisory/review state to the UI.
-
-**Exit**: sensitive test prompts are never presented as final advice.
-
-### IDC-4: Pilot Readiness
-
-Add rate limits, cost budgets, observability, retention controls, accessibility checks, and a Playwright chat journey test.
-
-**Exit**: the chat works in a production build on desktop and mobile with no secret or cross-user leakage.
-
-## Design Decisions
-
-- Keep SSE and the current Claude SDK integration unless operational testing proves WebSockets necessary.
-- Keep the existing Conversation/Message model and add only fields needed for retries, status, and auditability.
-- Business authorization belongs in a service/guard, not in React components.
+### Phase 5: Stream Robustness & UX Controls
+1. **Stop Generating**:
+   - Attach `AbortController` to the fetch request; provide a pulsating "Stop" button in place of the send button during generation.
+2. **Smart Auto-Scroll**:
+   - Check scroll position against a 70px threshold; only auto-scroll if the student is already near the bottom, with a floating scroll-to-bottom button when scrolled up.
+3. **Resilient SSE Parser**:
+   - Parse SSE blocks split across network boundaries safely, wrapping JSON decode in `try...catch` blocks to prevent unhandled stream errors.

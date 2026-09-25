@@ -81,10 +81,15 @@ export const HIGH_STAKES_KEYWORDS = [
   'switch major',
   'change major',
   'drop out',
+  'dropout',
+  'dropping out',
   'leave university',
   'declare major',
   'quit school',
   'transfer university',
+  'academic probation',
+  'faculty transfer',
+  'switch faculty',
 ];
 
 export interface StudentUser {
