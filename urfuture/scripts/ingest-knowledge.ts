@@ -64,10 +64,10 @@ function chunkText(text: string): string[] {
 // File parsers
 // ---------------------------------------------------------------------------
 function parseFrontMatter(raw: string): { attrs: Record<string, string>; body: string } {
-  const match = raw.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+  const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
   if (!match) return { attrs: {}, body: raw };
   const attrs: Record<string, string> = {};
-  for (const line of match[1].split('\n')) {
+  for (const line of match[1].split(/\r?\n/)) {
     const kv = line.match(/^([A-Za-z0-9_]+):\s*(.*)$/);
     if (kv) attrs[kv[1]] = kv[2].trim();
   }
@@ -185,7 +185,7 @@ async function loadDocuments(dir: string): Promise<ParsedDoc[]> {
 // ---------------------------------------------------------------------------
 // Upsert
 // ---------------------------------------------------------------------------
-async function upsertDocument(doc: ParsedDoc, dryRun: boolean) {
+async function upsertDocument(doc: ParsedDoc, dryRun: boolean, force = false) {
   const chunks = chunkText(doc.content);
   if (chunks.length === 0) {
     console.warn(`  (skipping "${doc.title}" — no content after parsing)`);
@@ -198,6 +198,14 @@ async function upsertDocument(doc: ParsedDoc, dryRun: boolean) {
   }
 
   const existing = await prisma.knowledgeDocument.findFirst({ where: { source: doc.source } });
+
+  if (existing && !force) {
+    const existingChunksCount = await prisma.knowledgeChunk.count({ where: { documentId: existing.id } });
+    if (existingChunksCount > 0) {
+      console.log(`  ✓ "${doc.title}" (${doc.source}) — ${existingChunksCount} chunks already indexed (pass --force to re-embed)`);
+      return;
+    }
+  }
 
   const document = existing
     ? await prisma.knowledgeDocument.update({
@@ -256,8 +264,14 @@ async function upsertDocument(doc: ParsedDoc, dryRun: boolean) {
 async function main() {
   const args = process.argv.slice(2);
   const dirArg = args.find((a) => a.startsWith('--dir'));
-  const dir = dirArg?.includes('=') ? dirArg.split('=')[1] : args[args.indexOf('--dir') + 1] || 'data/knowledge';
+  const dirIndex = args.indexOf('--dir');
+  const dir = dirArg?.includes('=')
+    ? dirArg.split('=')[1]
+    : dirIndex !== -1
+      ? args[dirIndex + 1]
+      : 'data/knowledge';
   const dryRun = args.includes('--dry-run');
+  const force = args.includes('--force');
 
   const resolvedDir = path.resolve(process.cwd(), dir);
   if (!fs.existsSync(resolvedDir)) {
@@ -271,7 +285,7 @@ async function main() {
   console.log(`Found ${docs.length} document(s).\n`);
 
   for (const doc of docs) {
-    await upsertDocument(doc, dryRun);
+    await upsertDocument(doc, dryRun, force);
   }
 
   if (!dryRun) {

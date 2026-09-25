@@ -32,25 +32,42 @@ async function embedWithOpenAI(texts: string[]): Promise<number[][]> {
   return json.data.sort((a, b) => a.index - b.index).map((d) => d.embedding);
 }
 
-async function embedWithVoyage(texts: string[]): Promise<number[][]> {
+async function embedWithVoyage(texts: string[], maxRetries = 4): Promise<number[][]> {
   const apiKey = process.env.VOYAGE_API_KEY;
   if (!apiKey) {
     throw new Error('EMBEDDING_PROVIDER=voyage but VOYAGE_API_KEY is not set.');
   }
-  const res = await fetch('https://api.voyageai.com/v1/embeddings', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({ model: process.env.VOYAGE_MODEL || 'voyage-large-2', input: texts }),
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`Voyage embeddings request failed (${res.status}): ${body}`);
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await fetch('https://api.voyageai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ model: process.env.VOYAGE_MODEL || 'voyage-large-2', input: texts }),
+    });
+
+    if (res.status === 429 && attempt < maxRetries) {
+      // Voyage free tier limits to 3 RPM without payment card. Wait 21s so rate limit window resets.
+      const waitMs = 21000;
+      console.warn(
+        `[Voyage AI] Rate limit (429) encountered. Waiting ${waitMs / 1000}s before retry (attempt ${attempt + 1}/${maxRetries})...`
+      );
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+      continue;
+    }
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`Voyage embeddings request failed (${res.status}): ${body}`);
+    }
+
+    const json = (await res.json()) as { data: { embedding: number[]; index: number }[] };
+    return json.data.sort((a, b) => a.index - b.index).map((d) => d.embedding);
   }
-  const json = (await res.json()) as { data: { embedding: number[]; index: number }[] };
-  return json.data.sort((a, b) => a.index - b.index).map((d) => d.embedding);
+
+  throw new Error('Voyage embeddings request failed: exceeded max retries.');
 }
 
 /** Deterministic hash-based pseudo-embedding. Same input always yields the
