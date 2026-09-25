@@ -472,6 +472,8 @@ export default function Home() {
         {isCopilotOpen && (
           <ChatPanel
             userId={currentUser.id}
+            studentName={currentUser.name}
+            userName={currentUser.name}
             isModal={true}
             onClose={() => setIsCopilotOpen(false)}
           />

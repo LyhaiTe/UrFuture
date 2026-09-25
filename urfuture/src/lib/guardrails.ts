@@ -12,6 +12,7 @@ export async function flagForCounselorReview(opts: {
   studentId: string;
   careerRecommendationId?: string;
   reason: string;
+  counselorNotes?: string;
 }) {
   return prisma.counselorReview.create({
     data: {
@@ -19,6 +20,7 @@ export async function flagForCounselorReview(opts: {
       careerRecommendationId: opts.careerRecommendationId,
       reason: opts.reason,
       status: 'PENDING',
+      counselorNotes: opts.counselorNotes,
     },
   });
 }
