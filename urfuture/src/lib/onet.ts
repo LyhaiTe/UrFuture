@@ -24,6 +24,21 @@ export interface OnetOccupation {
   medianSalaryUsd?: number;
 }
 
+export interface OnetApiSkill {
+  name: string;
+  onetElementId: string;
+  category: string;
+  importance: number;
+  level?: number;
+}
+
+export interface OnetApiOccupation {
+  title: string;
+  onetSocCode: string;
+  descriptionShort: string;
+  skills: OnetApiSkill[];
+}
+
 /**
  * Standard O*NET Content Model Taxonomy aligned with Cambodia's IT, Data,
  * Engineering, and Digital Economy priorities (ADB & NEA Cambodia surveys).
@@ -143,19 +158,156 @@ export const TARGET_ONET_CAREERS: OnetOccupation[] = [
       { name: 'Project Management', category: 'Business', onetElementId: '2.B.5.a', importance: 84, level: 78 },
     ],
   },
+  {
+    title: 'AI / Machine Learning Engineer',
+    onetSocCode: '15-1299.08',
+    descriptionShort: 'Research, design, and develop machine learning systems and artificial intelligence applications.',
+    growthOutlook: 'Very High — AI adoption is expanding across Cambodia\'s digital services and education sectors.',
+    requiredEducation: 'UNIVERSITY_YEAR_3',
+    medianSalaryUsd: 13200,
+    skills: [
+      { name: 'Programming Fundamentals', category: 'Technical', onetElementId: '2.B.3.f', importance: 94, level: 88 },
+      { name: 'Machine Learning', category: 'Technical', onetElementId: '2.B.3.g', importance: 93, level: 88 },
+      { name: 'Mathematics', category: 'Quantitative', onetElementId: '2.A.1.b', importance: 86, level: 80 },
+      { name: 'Data Analysis', category: 'Technical', onetElementId: '2.C.3.a', importance: 84, level: 78 },
+      { name: 'Complex Problem Solving', category: 'Cognitive', onetElementId: '2.B.2.i', importance: 90, level: 84 },
+    ],
+  },
+  {
+    title: 'Telecommunications & Network Engineer',
+    onetSocCode: '17-2072.00',
+    descriptionShort: 'Design and develop systems for transmitting data and communications across wired and wireless networks.',
+    growthOutlook: 'High — Connectivity, 5G, and smart infrastructure continue to expand across Cambodia.',
+    requiredEducation: 'UNIVERSITY_YEAR_3',
+    medianSalaryUsd: 10200,
+    skills: [
+      { name: 'Network Engineering', category: 'Technical', onetElementId: '2.C.3.a', importance: 94, level: 88 },
+      { name: 'Systems Analysis', category: 'Technical', onetElementId: '2.B.3.a', importance: 86, level: 82 },
+      { name: 'Circuit & Systems Design', category: 'Technical', onetElementId: '2.B.3.b', importance: 84, level: 78 },
+      { name: 'Troubleshooting', category: 'Technical', onetElementId: '2.B.3.e', importance: 88, level: 82 },
+      { name: 'Complex Problem Solving', category: 'Cognitive', onetElementId: '2.B.2.i', importance: 84, level: 80 },
+    ],
+  },
+  {
+    title: 'Web & Digital Interface Designer (UI/UX)',
+    onetSocCode: '15-1255.00',
+    descriptionShort: 'Design and develop user interfaces for websites and digital products with a focus on usability and visual communication.',
+    growthOutlook: 'High — Cambodia\'s product, fintech, and e-commerce teams need bilingual digital experiences.',
+    requiredEducation: 'UNIVERSITY_YEAR_2',
+    medianSalaryUsd: 9000,
+    skills: [
+      { name: 'User Experience & Interface Design', category: 'Design', onetElementId: '2.C.3.b', importance: 95, level: 90 },
+      { name: 'Web Programming', category: 'Technical', onetElementId: '2.B.3.f', importance: 82, level: 76 },
+      { name: 'Visual Communication', category: 'Communication', onetElementId: '2.A.1.d', importance: 84, level: 80 },
+      { name: 'User Research', category: 'Design', onetElementId: '2.B.1.a', importance: 80, level: 74 },
+      { name: 'Critical Thinking', category: 'Cognitive', onetElementId: '2.A.2.a', importance: 82, level: 76 },
+    ],
+  },
+  {
+    title: 'Database Administrator & Architect',
+    onetSocCode: '15-1243.00',
+    descriptionShort: 'Design, implement, secure, and maintain database systems and the data architectures that support organizations.',
+    growthOutlook: 'High — Banks, telecoms, and public services require reliable data platforms and governance.',
+    requiredEducation: 'UNIVERSITY_YEAR_3',
+    medianSalaryUsd: 10800,
+    skills: [
+      { name: 'Database Management & SQL', category: 'Technical', onetElementId: '2.C.3.a', importance: 96, level: 92 },
+      { name: 'Data Modeling', category: 'Technical', onetElementId: '2.B.3.a', importance: 90, level: 84 },
+      { name: 'Information Security', category: 'Technical', onetElementId: '2.C.3.a', importance: 86, level: 80 },
+      { name: 'Systems Troubleshooting', category: 'Technical', onetElementId: '2.B.3.e', importance: 88, level: 82 },
+      { name: 'Critical Thinking', category: 'Cognitive', onetElementId: '2.A.2.a', importance: 82, level: 76 },
+    ],
+  },
+  {
+    title: 'Financial & Investment Analyst',
+    onetSocCode: '13-2051.00',
+    descriptionShort: 'Conduct quantitative analyses of information involving investment programs and financial data.',
+    growthOutlook: 'High — Cambodia\'s banking, investment, and fintech sectors need stronger evidence-based financial analysis.',
+    requiredEducation: 'UNIVERSITY_YEAR_3',
+    medianSalaryUsd: 9600,
+    skills: [
+      { name: 'Financial Analysis', category: 'Business', onetElementId: '2.C.9.a', importance: 95, level: 88 },
+      { name: 'Statistics & Probability', category: 'Quantitative', onetElementId: '2.A.1.f', importance: 90, level: 84 },
+      { name: 'Data Analysis', category: 'Technical', onetElementId: '2.B.3.g', importance: 86, level: 80 },
+      { name: 'Critical Thinking', category: 'Cognitive', onetElementId: '2.A.2.a', importance: 88, level: 82 },
+      { name: 'Written Communication', category: 'Communication', onetElementId: '2.A.1.d', importance: 82, level: 76 },
+    ],
+  },
 ];
 
 /**
  * Service to manage authentication and live requests to O*NET Web Services.
  */
 export class OnetWebService {
-  private username: string;
-  private password: string;
+  private readonly username: string;
+  private readonly password: string;
   private sessionCookie: string | null = null;
 
   constructor() {
     this.username = process.env.ONET_USERNAME || 'sn6024010087@camtech.edu.kh';
     this.password = process.env.ONET_PASSWORD || '$urfuture1$';
+  }
+
+  private get apiKey(): string | undefined {
+    return process.env.ONET_API_KEY?.trim() || undefined;
+  }
+
+  private async request<T>(path: string): Promise<T | null> {
+    if (!this.apiKey) return null;
+    try {
+      const response = await fetch(`https://api-v2.onetcenter.org${path}`, {
+        headers: { Accept: 'application/json', 'X-API-Key': this.apiKey },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!response.ok) return null;
+      return await response.json() as T;
+    } catch {
+      return null;
+    }
+  }
+
+  async searchOccupations(query: string): Promise<OnetOccupation[]> {
+    const data = await this.request<{ occupation?: Array<Record<string, unknown>> }>(
+      `/online/search?keyword=${encodeURIComponent(query)}`,
+    );
+    if (!data?.occupation) {
+      return TARGET_ONET_CAREERS.filter((career) => career.title.toLowerCase().includes(query.toLowerCase()));
+    }
+    return data.occupation.map((occupation) => ({
+      title: toText(occupation.title ?? occupation.name),
+      onetSocCode: toText(occupation.code ?? occupation.soc_code),
+      descriptionShort: toText(occupation.description),
+      growthOutlook: 'Live O*NET occupation',
+      requiredEducation: 'UNIVERSITY_YEAR_2',
+      skills: [],
+    }));
+  }
+
+  async getOccupationSkills(socCode: string): Promise<OnetApiOccupation | null> {
+    const encodedCode = encodeURIComponent(socCode);
+    const [summary, skills, knowledge] = await Promise.all([
+      this.request<Record<string, unknown>>(`/online/occupations/${encodedCode}`),
+      this.request<Record<string, unknown>>(`/online/occupations/${encodedCode}/skills`),
+      this.request<Record<string, unknown>>(`/online/occupations/${encodedCode}/knowledge`),
+    ]);
+    if (!summary && !skills && !knowledge) {
+      const fallback = TARGET_ONET_CAREERS.find((career) => career.onetSocCode === socCode);
+      return fallback ? { title: fallback.title, onetSocCode: fallback.onetSocCode, descriptionShort: fallback.descriptionShort, skills: fallback.skills } : null;
+    }
+
+    const records = [...extractRecords(skills), ...extractRecords(knowledge)];
+    return {
+      title: toText(summary?.title ?? summary?.name) || socCode,
+      onetSocCode: socCode,
+      descriptionShort: toText(summary?.description ?? summary?.description_short),
+      skills: records.map((record) => ({
+        name: String(record.element?.name ?? record.name ?? ''),
+        onetElementId: String(record.element?.id ?? record.id ?? ''),
+        category: String(record.category ?? 'Technical'),
+        importance: readScale(record, 'IM'),
+        level: readScale(record, 'LV'),
+      })).filter((skill) => skill.name && skill.onetElementId),
+    };
   }
 
   /**
@@ -197,6 +349,25 @@ export class OnetWebService {
   getOccupations(): OnetOccupation[] {
     return TARGET_ONET_CAREERS;
   }
+}
+
+function extractRecords(payload: Record<string, unknown> | null): Array<Record<string, any>> {
+  if (!payload) return [];
+  for (const key of ['skills', 'knowledge', 'data', 'elements']) {
+    if (Array.isArray(payload[key])) return payload[key] as Array<Record<string, any>>;
+  }
+  return [];
+}
+
+function readScale(record: Record<string, any>, scaleId: string): number {
+  const scale = Array.isArray(record.scale) ? record.scale.find((item: Record<string, any>) => item.id === scaleId || item.scale_id === scaleId) : null;
+  const value = scale?.value ?? record[scaleId.toLowerCase()] ?? record[scaleId];
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function toText(value: unknown): string {
+  return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
 }
 
 export const onetService = new OnetWebService();

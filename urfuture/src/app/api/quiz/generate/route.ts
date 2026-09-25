@@ -61,7 +61,14 @@ async function handlePost(req: NextRequest) {
   const majorContext = selectedMajor
     ? `The student's selected major is "${selectedMajor.title}". Focus questions on knowledge relevant to this major and its required skills.`
     : 'No major has been selected; keep questions grounded in the uploaded coursework.';
-  const userMessage = `${majorContext}\n\nHere are all of this student's transcripts on file:\n\n${courseSummary}\n\nGenerate ${questionCount ?? 10} diagnostic questions. Mix MULTIPLE_CHOICE, WRITTEN, and CODING. Return JSON only in this exact shape: {"questions":[{"questionType":"MULTIPLE_CHOICE|WRITTEN|CODING","skillName":"string","prompt":"string","choices":["string"],"correctIndex":0,"expectedAnswer":"string","difficulty":"EASY|MEDIUM|HARD","sourceCourse":"string"}]}. For written/coding questions, choices must contain the expected answer as its first item. Ground every question in a listed course.`;
+  const onetSkills = selectedMajor
+    ? await prisma.careerSkillRequirement.findMany({ where: { careerPathId: selectedMajor.id }, include: { skill: true } })
+    : [];
+  const skillLabels = onetSkills.map((requirement) => `${requirement.skill.name} (${requirement.skill.onetElementId ?? 'n/a'})`).join(', ');
+  const skillContext = onetSkills.length > 0
+    ? `Use these O*NET skills when relevant and preserve their exact skillName and onetElementId: ${skillLabels}`
+    : 'No O*NET skill mapping is available; use the most specific skill name supported by the coursework.';
+  const userMessage = `${majorContext}\n${skillContext}\n\nHere are all of this student's transcripts on file:\n\n${courseSummary}\n\nGenerate ${questionCount ?? 10} diagnostic questions. Mix MULTIPLE_CHOICE, WRITTEN, and CODING. Return JSON only in this exact shape: {"questions":[{"questionType":"MULTIPLE_CHOICE|WRITTEN|CODING","skillName":"string","onetElementId":"string or empty","prompt":"string","choices":["string"],"correctIndex":0,"expectedAnswer":"string","difficulty":"EASY|MEDIUM|HARD","sourceCourse":"string"}]}. For written/coding questions, choices must contain the expected answer as its first item. Ground every question in a listed course.`;
   
   let result: { questions: QuizGeneratedQuestion[] };
   try {
@@ -80,10 +87,14 @@ async function handlePost(req: NextRequest) {
   const questionIds: string[] = [];
   const questionMetadata = new Map<string, QuizGeneratedQuestion>();
   for (const q of result.questions) {
+    const mappedSkill = onetSkills.find((requirement) =>
+      requirement.skill.name.toLowerCase() === q.skillName.toLowerCase() ||
+      requirement.skill.onetElementId === q.onetElementId,
+    );
     const skill = await prisma.skill.upsert({
       where: { name: q.skillName },
-      update: {},
-      create: { name: q.skillName },
+      update: mappedSkill ? { onetElementId: mappedSkill.skill.onetElementId, category: mappedSkill.skill.category } : {},
+      create: { name: q.skillName, onetElementId: mappedSkill?.skill.onetElementId ?? q.onetElementId },
     });
     const created = await prisma.quizQuestion.create({
       data: {
@@ -108,7 +119,10 @@ async function handlePost(req: NextRequest) {
     },
   });
 
-  const questions = await prisma.quizQuestion.findMany({ where: { id: { in: questionIds } } });
+  const questions = await prisma.quizQuestion.findMany({
+    where: { id: { in: questionIds } },
+    include: { skill: true },
+  });
 
   return NextResponse.json({
     quizAttemptId: attempt.id,
@@ -119,6 +133,7 @@ async function handlePost(req: NextRequest) {
       choices: q.choices,
       difficulty: q.difficulty,
       sourceCourse: q.sourceCourse,
+      onetElementId: q.skill.onetElementId ?? questionMetadata.get(q.id)?.onetElementId,
       questionType: questionMetadata.get(q.id)?.questionType ?? 'MULTIPLE_CHOICE',
       expectedAnswer: questionMetadata.get(q.id)?.expectedAnswer,
       // correctIndex intentionally withheld from the client payload

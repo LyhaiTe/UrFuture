@@ -15,6 +15,14 @@ import {
 } from '@/lib/careerFilters';
 import type { Career } from '@/types/career';
 
+const ONET_CARD_METADATA: Record<string, { socCode: string; elementId: string; importance: number }> = {
+  'Software Engineer': { socCode: '15-1252.00', elementId: '2.B.3.f', importance: 92 },
+  'Frontend Developer': { socCode: '15-1254.00', elementId: '2.B.3.f', importance: 90 },
+  'Data Engineer': { socCode: '15-2051.00', elementId: '2.B.3.g', importance: 90 },
+  'Cybersecurity Analyst': { socCode: '15-1212.00', elementId: '2.C.3.a', importance: 95 },
+  'UI/UX Designer': { socCode: '15-1255.00', elementId: '2.C.3.b', importance: 95 },
+};
+
 /**
  * Career Paths panel.
  *
@@ -117,6 +125,11 @@ export default function CareerFitPanel({ userId: _userId }: CareerFitPanelProps)
               className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl p-5 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors animate-fade-in-up motion-reduce:animate-none"
               style={{ animationDelay: `${Math.min(index, 8) * 35}ms` }}
             >
+              {(() => {
+                const onet = career.onetSocCode
+                  ? { socCode: career.onetSocCode, elementId: career.onetElementId ?? 'n/a', importance: career.onetImportance ?? 0 }
+                  : ONET_CARD_METADATA[career.title];
+                return (
               <div className="grid grid-cols-1 lg:grid-cols-[50px_1fr_240px_80px_120px] gap-4 lg:items-center">
                 <div className="text-[#00d2ff] text-xs font-bold">#{index + 1}</div>
 
@@ -128,12 +141,17 @@ export default function CareerFitPanel({ userId: _userId }: CareerFitPanelProps)
                   <p className="text-xs text-slate-500 mt-1">
                     {career.fitLabel} · {CATEGORY_BY_ID[categoryOf(career)].label}
                   </p>
+                  {onet && (
+                    <p className="text-[11px] text-cyan-700 dark:text-cyan-300 mt-1">
+                      O*NET-SOC {onet.socCode}
+                    </p>
+                  )}
                 </div>
 
                 <div className="text-xs">
                   <span className="text-amber-600 dark:text-amber-400">Missing:</span>{' '}
                   <span className="text-slate-600 dark:text-slate-400">
-                    {career.missingSkill}
+                    {career.missingSkill}{onet && ` · Element ${onet.elementId} · Importance ${onet.importance}/100`}
                   </span>
                 </div>
 
@@ -150,6 +168,8 @@ export default function CareerFitPanel({ userId: _userId }: CareerFitPanelProps)
                   View details
                 </button>
               </div>
+                );
+              })()}
             </li>
           ))}
         </ul>

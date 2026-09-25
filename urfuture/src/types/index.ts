@@ -67,6 +67,7 @@ export interface QuizGeneratedQuestion {
   expectedAnswer?: string;
   difficulty: 'EASY' | 'MEDIUM' | 'HARD';
   sourceCourse?: string;
+  onetElementId?: string;
 }
 
 export interface ChatToolTrace {

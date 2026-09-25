@@ -56,3 +56,23 @@ The Occupational Information Network (O*NET) Content Model provides the standard
   - `2.C.9.a` Business & Financial Literacy (Importance: 88/100) — Financial metrics, operational workflows, and ROI evaluation.
   - `2.B.3.a` Systems Analysis & Requirements Gathering (Importance: 88/100) — Drafting software specifications, user stories, and acceptance criteria.
   - `2.A.1.d` Written Communication (Importance: 88/100) — Documenting architectural recommendations and stakeholder presentations.
+
+### 8. AI / Machine Learning Engineer (O*NET-SOC 15-1299.08)
+- **Role Summary**: Build machine learning systems and artificial intelligence applications.
+- **Core O*NET Skills**: `2.B.3.f` Programming Fundamentals (94/100), `2.B.3.g` Machine Learning (93/100), `2.A.1.b` Mathematics (86/100).
+
+### 9. Telecommunications & Network Engineer (O*NET-SOC 17-2072.00)
+- **Role Summary**: Design and maintain wired and wireless data transmission systems.
+- **Core O*NET Skills**: `2.C.3.a` Network Engineering (94/100), `2.B.3.a` Systems Analysis (86/100), `2.B.3.e` Troubleshooting (88/100).
+
+### 10. Web & Digital Interface Designer (UI/UX) (O*NET-SOC 15-1255.00)
+- **Role Summary**: Design user interfaces for websites and digital products with a focus on usability.
+- **Core O*NET Skills**: `2.C.3.b` User Experience & Interface Design (95/100), `2.B.3.f` Web Programming (82/100), `2.B.1.a` User Research (80/100).
+
+### 11. Database Administrator & Architect (O*NET-SOC 15-1243.00)
+- **Role Summary**: Design, secure, and maintain the database systems that support organizations.
+- **Core O*NET Skills**: `2.C.3.a` Database Management & SQL (96/100), `2.B.3.a` Data Modeling (90/100), `2.B.3.e` Systems Troubleshooting (88/100).
+
+### 12. Financial & Investment Analyst (O*NET-SOC 13-2051.00)
+- **Role Summary**: Analyze investment programs and financial data for evidence-based decisions.
+- **Core O*NET Skills**: `2.C.9.a` Financial Analysis (95/100), `2.A.1.f` Statistics & Probability (90/100), `2.B.3.g` Data Analysis (86/100).
