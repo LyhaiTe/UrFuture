@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Production / Build
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+
+# Environment & secrets
+.env
+.env*.local
+*.pem
+
+# Vercel
+.vercel/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Local uploads and artifacts
+uploads/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/

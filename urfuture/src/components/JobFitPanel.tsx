@@ -176,7 +176,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
     }
   }
 
-  function useSample(
+  function applySample(
     title: string,
     description: string
   ) {
@@ -240,7 +240,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
           <button
             type="button"
             onClick={() =>
-              useSample(
+              applySample(
                 'Junior Software Engineer',
                 'We are looking for a Junior Software Engineer named NUT SANNARA with knowledge of programming fundamentals, data structures, algorithms, SQL, database design, Git, automated testing, cloud deployment, and software development best practices.'
               )
@@ -253,7 +253,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
           <button
             type="button"
             onClick={() =>
-              useSample(
+              applySample(
                 'Data & Business Analyst',
                 'Seeking a Data and Business Analyst with skills in SQL, database systems, data analysis, dashboards, business intelligence, communication, reporting, Excel, and analytical problem solving.'
               )
