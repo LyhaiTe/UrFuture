@@ -199,6 +199,7 @@ export const GENERATE_QUIZ_TOOL: LLMTool = {
             properties: {
               questionType: { type: 'string', enum: ['MULTIPLE_CHOICE', 'WRITTEN', 'CODING', 'LAB'] },
               skillName: { type: 'string' },
+              onetElementId: { type: 'string' },
               prompt: { type: 'string' },
               choices: { type: 'array', items: { type: 'string' } },
               correctIndex: { type: 'number' },
@@ -260,6 +261,7 @@ export async function runToolCall<T>(opts: {
   system: string;
   userMessage: string;
   tool: LLMTool;
+  throwOnError?: boolean;
 }): Promise<T> {
   const provider = getActiveProvider();
 
@@ -284,6 +286,7 @@ export async function runToolCall<T>(opts: {
         return JSON.parse(toolCall.function.arguments) as T;
       }
     } catch (err) {
+      if (opts.throwOnError) throw err;
       console.warn('[llm] Groq tool execution failed, using local fallback:', err);
     }
   } else if (provider === 'anthropic') {
@@ -304,8 +307,13 @@ export async function runToolCall<T>(opts: {
         return toolUse.input as T;
       }
     } catch (err) {
+      if (opts.throwOnError) throw err;
       console.warn('[llm] Anthropic tool execution failed, using local fallback:', err);
     }
+  }
+
+  if (opts.throwOnError) {
+    throw new Error('LLM tool call did not return a valid result');
   }
 
   return getToolFallback<T>(opts.tool.function.name, opts.userMessage);

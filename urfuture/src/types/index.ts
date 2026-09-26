@@ -61,6 +61,7 @@ export interface JobFitResult {
 export interface QuizGeneratedQuestion {
   questionType: 'MULTIPLE_CHOICE' | 'WRITTEN' | 'CODING' | 'LAB';
   skillName: string;
+  onetElementId?: string;
   prompt: string;
   choices: string[];
   correctIndex?: number;
