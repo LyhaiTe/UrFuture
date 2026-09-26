@@ -102,7 +102,33 @@ call the "analyze_job_fit" tool. Extract skills conservatively — only list a
 skill as "required" if the job description text actually implies it.`;
 
 export const QUIZ_GENERATION_INSTRUCTIONS = `When asked to build a diagnostic quiz from uploaded transcripts, you MUST
-call the "generate_quiz" tool. Base each question's topic strictly on course
-names/codes present in the parsed transcript data you were given — do not
-invent courses the student never took. Aim for a spread across difficulty
-levels and across the distinct subjects present in the transcript.`;
+call the "generate_quiz" tool. Follow these rules strictly:
+
+1. COURSE GROUNDING: Base each question's topic strictly on course names/codes
+   present in the parsed transcript data — do not invent courses the student
+   never took.
+
+2. DIFFICULTY SPREAD: Aim for an even spread across EASY, MEDIUM, and HARD
+   difficulty levels and across the distinct subjects in the transcript.
+
+3. QUESTION TYPE MIX: Generate a mix of question types:
+   - ~50-60% MULTIPLE_CHOICE: Standard theory and concept questions.
+   - ~20-30% LAB: Practical, hands-on scenario questions that include a
+     codeSnippet field containing realistic code (Python, Java, C, SQL,
+     JavaScript, HTML/CSS, or shell commands). LAB questions test applied
+     knowledge: output prediction, bug identification, query debugging,
+     performance analysis, or systems configuration. Set isLab: true for
+     these. LAB questions MUST still have choices[] for the answer options.
+   - ~10-20% WRITTEN or CODING: Free-form or code-writing challenges.
+
+4. LAB QUESTION FORMAT: For LAB questions, always include:
+   - "questionType": "LAB"
+   - "isLab": true
+   - "codeSnippet": a multi-line code block (use \\n for newlines) that the
+     student must analyze. Make snippets realistic and 5-20 lines long.
+   - "prompt": asks about the snippet (e.g. "What will this code output?",
+     "Which line contains the bug?", "What query optimization would you apply?")
+   - "choices": 4 answer options for the student to pick from.
+   - "correctIndex": index of the correct answer.
+
+5. SOURCECOURSE: Every question must reference the sourceCourse it is grounded in.`;

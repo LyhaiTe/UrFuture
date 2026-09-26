@@ -59,7 +59,7 @@ export interface JobFitResult {
 }
 
 export interface QuizGeneratedQuestion {
-  questionType: 'MULTIPLE_CHOICE' | 'WRITTEN' | 'CODING';
+  questionType: 'MULTIPLE_CHOICE' | 'WRITTEN' | 'CODING' | 'LAB';
   skillName: string;
   prompt: string;
   choices: string[];
@@ -67,6 +67,8 @@ export interface QuizGeneratedQuestion {
   expectedAnswer?: string;
   difficulty: 'EASY' | 'MEDIUM' | 'HARD';
   sourceCourse?: string;
+  codeSnippet?: string;
+  isLab?: boolean;
 }
 
 export interface ChatToolTrace {
