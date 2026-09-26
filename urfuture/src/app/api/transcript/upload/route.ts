@@ -4,7 +4,7 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { anthropic, CLAUDE_MODEL } from '@/lib/claude';
 import { uploadTranscript } from '@/lib/storage';
-import { isValidApiKey } from '@/lib/llm';
+import { isValidApiKey, LLM_MODEL } from '@/lib/llm';
 
 export const runtime = 'nodejs';
 
@@ -274,16 +274,16 @@ async function extractWithGroq(rawText: string, system: string) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!isValidApiKey(apiKey)) throw new Error('Valid GROQ_API_KEY not configured');
 
-  const rawModel = process.env.LLM_MODEL?.trim();
-  const model = (!rawModel || rawModel.startsWith('openai/') || rawModel.includes('gpt-oss'))
-    ? 'llama-3.3-70b-versatile'
-    : rawModel;
-
+  // FIX: this used to re-derive its own "model" value with the same
+  // inverted openai/gpt-oss check as llm.ts, hardcoding the now-deprecated
+  // llama-3.3-70b-versatile whenever LLM_MODEL was a valid openai/gpt-oss-*
+  // value. Reuse the single, already-fixed LLM_MODEL export instead of
+  // duplicating (and re-breaking) that logic here.
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model,
+      model: LLM_MODEL,
       temperature: 0,
       response_format: { type: 'json_object' },
       messages: [

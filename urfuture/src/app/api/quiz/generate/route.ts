@@ -12,7 +12,7 @@ const bodySchema = z.object({
   userId: z.string(),
   careerPathId: z.string().optional(),
   major: z.string().trim().min(1).optional(),
-  questionCount: z.number().min(3).max(30).optional(),
+  questionCount: z.number().min(3).max(60).optional(),
 });
 
 /**
@@ -61,25 +61,55 @@ async function handlePost(req: NextRequest) {
   const majorContext = selectedMajor
     ? `The student's selected major is "${selectedMajor.title}". Focus questions on knowledge relevant to this major and its required skills.`
     : 'No major has been selected; keep questions grounded in the uploaded coursework.';
-  const onetSkills = selectedMajor
-    ? await prisma.careerSkillRequirement.findMany({ where: { careerPathId: selectedMajor.id }, include: { skill: true } })
-    : [];
-  const skillLabels = onetSkills.map((requirement) => `${requirement.skill.name} (${requirement.skill.onetElementId ?? 'n/a'})`).join(', ');
-  const skillContext = onetSkills.length > 0
-    ? `Use these O*NET skills when relevant and preserve their exact skillName and onetElementId: ${skillLabels}`
-    : 'No O*NET skill mapping is available; use the most specific skill name supported by the coursework.';
-  const userMessage = `${majorContext}\n${skillContext}\n\nHere are all of this student's transcripts on file:\n\n${courseSummary}\n\nGenerate ${questionCount ?? 10} diagnostic questions. Mix MULTIPLE_CHOICE, WRITTEN, and CODING. Return JSON only in this exact shape: {"questions":[{"questionType":"MULTIPLE_CHOICE|WRITTEN|CODING","skillName":"string","onetElementId":"string or empty","prompt":"string","choices":["string"],"correctIndex":0,"expectedAnswer":"string","difficulty":"EASY|MEDIUM|HARD","sourceCourse":"string"}]}. For written/coding questions, choices must contain the expected answer as its first item. Ground every question in a listed course.`;
+  const userMessage = `${majorContext}\n\nHere are all of this student's transcripts on file:\n\n${courseSummary}\n\nGenerate ${questionCount ?? 15} diagnostic questions. Mix MULTIPLE_CHOICE, LAB, WRITTEN, and CODING types. About 20-30% should be LAB questions with codeSnippet fields. Return JSON only in this exact shape: {"questions":[{"questionType":"MULTIPLE_CHOICE|LAB|WRITTEN|CODING","skillName":"string","prompt":"string","choices":["string"],"correctIndex":0,"expectedAnswer":"string","difficulty":"EASY|MEDIUM|HARD","sourceCourse":"string","codeSnippet":"string|null","isLab":false}]}. For LAB questions, always set isLab:true and include a realistic codeSnippet. For written/coding questions, choices must contain the expected answer as its first item. Ground every question in a listed course.`;
   
+  const requestedCount = questionCount ?? 15;
   let result: { questions: QuizGeneratedQuestion[] };
   try {
-    result = await runToolCall<{ questions: QuizGeneratedQuestion[] }>({
-      system: `${BASE_SYSTEM_PROMPT}\n\n${QUIZ_GENERATION_INSTRUCTIONS}`,
-      userMessage,
-      tool: GENERATE_QUIZ_TOOL,
-    });
+    if (requestedCount > 20) {
+      // Batch generation: split into chunks of 20 to avoid token limits/timeouts
+      const batchSize = 20;
+      const batches = Math.ceil(requestedCount / batchSize);
+      const allQuestions: QuizGeneratedQuestion[] = [];
+      for (let i = 0; i < batches; i++) {
+        const count = Math.min(batchSize, requestedCount - allQuestions.length);
+        const batchMessage = userMessage.replace(
+          `Generate ${requestedCount}`,
+          `Generate ${count}`
+        );
+        const batchResult = await runToolCall<{ questions: QuizGeneratedQuestion[] }>({
+          system: `${BASE_SYSTEM_PROMPT}\n\n${QUIZ_GENERATION_INSTRUCTIONS}`,
+          userMessage: batchMessage,
+          tool: GENERATE_QUIZ_TOOL,
+          throwOnError: true,
+        });
+        allQuestions.push(...(batchResult.questions || []));
+      }
+      result = { questions: allQuestions.slice(0, requestedCount) };
+    } else {
+      result = await runToolCall<{ questions: QuizGeneratedQuestion[] }>({
+        system: `${BASE_SYSTEM_PROMPT}\n\n${QUIZ_GENERATION_INSTRUCTIONS}`,
+        userMessage,
+        tool: GENERATE_QUIZ_TOOL,
+        throwOnError: true,
+      });
+    }
+
+    // Guarantee requested question count even if LLM returns fewer questions
+    if (!result.questions || result.questions.length < requestedCount) {
+      console.warn(`LLM generated ${result.questions?.length ?? 0} questions out of ${requestedCount} requested. Supplementing with grounded fallback questions.`);
+      const fallbacks = buildFallbackQuestions(transcripts, requestedCount);
+      if (!result.questions || result.questions.length === 0) {
+        result = { questions: fallbacks };
+      } else {
+        // Keep valid AI questions and fill remaining quota with fallback lab/MC questions
+        const needed = requestedCount - result.questions.length;
+        result = { questions: [...result.questions, ...fallbacks.slice(0, needed)] };
+      }
+    }
   } catch (error) {
     console.warn('AI quiz generation failed; using grounded fallback questions:', error);
-    result = { questions: buildFallbackQuestions(transcripts, questionCount ?? 8) };
+    result = { questions: buildFallbackQuestions(transcripts, requestedCount) };
   }
 
   // Persist questions against the Skill table (creating skills on the fly if new),
@@ -105,6 +135,9 @@ async function handlePost(req: NextRequest) {
         correctIndex: q.correctIndex ?? -1,
         difficulty: q.difficulty,
         sourceCourse: q.sourceCourse,
+        questionType: q.questionType ?? 'MULTIPLE_CHOICE',
+        codeSnippet: q.codeSnippet ?? null,
+        isLab: q.isLab ?? false,
       },
     });
     questionIds.push(created.id);
@@ -133,9 +166,10 @@ async function handlePost(req: NextRequest) {
       choices: q.choices,
       difficulty: q.difficulty,
       sourceCourse: q.sourceCourse,
-      onetElementId: q.skill.onetElementId ?? questionMetadata.get(q.id)?.onetElementId,
-      questionType: questionMetadata.get(q.id)?.questionType ?? 'MULTIPLE_CHOICE',
+      questionType: questionMetadata.get(q.id)?.questionType ?? (q as Record<string, unknown>).questionType ?? 'MULTIPLE_CHOICE',
       expectedAnswer: questionMetadata.get(q.id)?.expectedAnswer,
+      codeSnippet: questionMetadata.get(q.id)?.codeSnippet ?? (q as Record<string, unknown>).codeSnippet ?? null,
+      isLab: questionMetadata.get(q.id)?.isLab ?? (q as Record<string, unknown>).isLab ?? false,
       // correctIndex intentionally withheld from the client payload
     })),
   });
@@ -153,15 +187,83 @@ function buildFallbackQuestions(
     })
     .filter((course, index, all) => course && all.indexOf(course) === index);
   const selectedCourses = uniqueCourses.slice(0, Math.max(questionCount, 3));
+
+  const labSnippets: Array<{ course: string; prompt: string; snippet: string; choices: string[]; correctIndex: number }> = [
+    {
+      course: 'Programming',
+      prompt: 'What will the following Python code print?',
+      snippet: 'x = [1, 2, 3, 4, 5]\nresult = x[1:4]\nprint(result)',
+      choices: ['[1, 2, 3, 4]', '[2, 3, 4]', '[1, 2, 3]', '[2, 3, 4, 5]'],
+      correctIndex: 1,
+    },
+    {
+      course: 'Database Systems',
+      prompt: 'Which line contains the SQL syntax error?',
+      snippet: 'SELECT name, COUNT(*)\nFROM students\nWHERE grade > 3.0\nGROUP ON department\nHAVING COUNT(*) > 5;',
+      choices: ['Line 1: SELECT clause', 'Line 3: WHERE clause', 'Line 4: should be GROUP BY, not GROUP ON', 'Line 5: HAVING clause'],
+      correctIndex: 2,
+    },
+    {
+      course: 'Web Development',
+      prompt: 'What does this JavaScript function return when called with [3, 1, 4, 1, 5]?',
+      snippet: 'function mystery(arr) {\n  return arr.filter((v, i) =>\n    arr.indexOf(v) === i\n  ).length;\n}',
+      choices: ['5', '4', '3', 'undefined'],
+      correctIndex: 1,
+    },
+    {
+      course: 'Data Structures',
+      prompt: 'What is the output of this stack operation sequence?',
+      snippet: 'stack = []\nstack.append(10)\nstack.append(20)\nstack.append(30)\nstack.pop()\nstack.append(40)\nprint(stack[-1])',
+      choices: ['10', '20', '30', '40'],
+      correctIndex: 3,
+    },
+    {
+      course: 'Networking',
+      prompt: 'What subnet mask does this CIDR notation represent?',
+      snippet: '# Network Configuration\nIP Address: 192.168.1.0/26\n# Question: What is the subnet mask?',
+      choices: ['255.255.255.0', '255.255.255.128', '255.255.255.192', '255.255.255.224'],
+      correctIndex: 2,
+    },
+    {
+      course: 'Operating Systems',
+      prompt: 'What does this shell command pipeline produce?',
+      snippet: 'echo "hello world hello" | tr " " "\\n" | sort | uniq -c | sort -rn | head -1',
+      choices: ['2 hello', '1 world', 'hello', '3'],
+      correctIndex: 0,
+    },
+  ];
+
   return Array.from({ length: questionCount }, (_, index) => {
     const course = selectedCourses[index % selectedCourses.length] || 'your uploaded coursework';
+    const isLabQuestion = index % 5 === 2 || index % 5 === 4; // ~40% lab in fallback for variety
+
+    if (isLabQuestion) {
+      const lab = labSnippets[index % labSnippets.length];
+      return {
+        questionType: 'LAB' as const,
+        skillName: course,
+        prompt: lab.prompt,
+        choices: lab.choices,
+        correctIndex: lab.correctIndex,
+        difficulty: index % 3 === 0 ? 'EASY' as const : index % 3 === 1 ? 'MEDIUM' as const : 'HARD' as const,
+        sourceCourse: course,
+        codeSnippet: lab.snippet,
+        isLab: true,
+      };
+    }
+
     return {
-      questionType: 'MULTIPLE_CHOICE',
+      questionType: 'MULTIPLE_CHOICE' as const,
       skillName: course,
       prompt: `Which statement best describes a core concept you should understand from ${course}?`,
-      choices: [`The foundational concepts and practical methods taught in ${course}`, 'Only memorizing the course title', 'Avoiding practice and examples', 'The subject has no practical applications'],
+      choices: [
+        `The foundational concepts and practical methods taught in ${course}`,
+        'Only memorizing the course title',
+        'Avoiding practice and examples',
+        'The subject has no practical applications',
+      ],
       correctIndex: 0,
-      difficulty: index % 3 === 0 ? 'EASY' : index % 3 === 1 ? 'MEDIUM' : 'HARD',
+      difficulty: index % 3 === 0 ? 'EASY' as const : index % 3 === 1 ? 'MEDIUM' as const : 'HARD' as const,
       sourceCourse: course,
     };
   });

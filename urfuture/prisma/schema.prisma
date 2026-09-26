@@ -242,6 +242,9 @@ model QuizQuestion {
   correctIndex Int
   difficulty   String
   sourceCourse String?
+  questionType String?
+  codeSnippet  String?      @db.Text
+  isLab        Boolean      @default(false)
   answers      QuizAnswer[]
 
   @@index([careerPathId])

@@ -2,11 +2,6 @@ import Groq from 'groq-sdk';
 import Anthropic from '@anthropic-ai/sdk';
 import type { Tool as AnthropicTool } from '@anthropic-ai/sdk/resources/messages';
 
-// ---------------------------------------------------------------------------
-// Helpers & Active Provider Detection
-// Supports Groq, Claude (Anthropic), and a Graceful Local Dev Fallback
-// ---------------------------------------------------------------------------
-
 export function isValidApiKey(key?: string): boolean {
   if (!key) return false;
   const trimmed = key.trim();
@@ -33,14 +28,10 @@ export function getActiveProvider(): 'groq' | 'anthropic' | 'fallback' {
 
 const rawModel = process.env.LLM_MODEL?.trim();
 const isGroq = isValidApiKey(process.env.GROQ_API_KEY);
-export const LLM_MODEL =
-  (rawModel && !rawModel.startsWith('openai/') && !rawModel.includes('gpt-oss') ? rawModel : null) ||
-  (isGroq ? 'llama-3.3-70b-versatile' : (process.env.CLAUDE_MODEL || 'claude-sonnet-4-6'));
 
-// ---------------------------------------------------------------------------
-// Tool (function-calling) definitions — OpenAI-compatible format
-// Each tool forces the model to emit a strict JSON shape instead of free prose.
-// ---------------------------------------------------------------------------
+export const LLM_MODEL =
+  rawModel ||
+  (isGroq ? 'openai/gpt-oss-20b' : (process.env.CLAUDE_MODEL || 'claude-sonnet-4-6'));
 
 interface ToolFunction {
   name: string;
@@ -197,7 +188,7 @@ export const GENERATE_QUIZ_TOOL: LLMTool = {
   type: 'function',
   function: {
     name: 'generate_quiz',
-    description: "Generate diagnostic multiple-choice questions strictly from the student's parsed transcript courses.",
+    description: "Generate diagnostic quiz questions (multiple-choice, lab/hands-on, written, coding) strictly from the student's parsed transcript courses.",
     parameters: {
       type: 'object',
       properties: {
@@ -206,12 +197,16 @@ export const GENERATE_QUIZ_TOOL: LLMTool = {
           items: {
             type: 'object',
             properties: {
+              questionType: { type: 'string', enum: ['MULTIPLE_CHOICE', 'WRITTEN', 'CODING', 'LAB'] },
               skillName: { type: 'string' },
               prompt: { type: 'string' },
               choices: { type: 'array', items: { type: 'string' } },
               correctIndex: { type: 'number' },
+              expectedAnswer: { type: 'string' },
               difficulty: { type: 'string', enum: ['EASY', 'MEDIUM', 'HARD'] },
               sourceCourse: { type: 'string' },
+              codeSnippet: { type: 'string', description: 'Code snippet for LAB questions. Use \\n for newlines.' },
+              isLab: { type: 'boolean', description: 'Set to true for practical Lab/hands-on questions.' },
             },
             required: ['skillName', 'prompt', 'choices', 'correctIndex', 'difficulty'],
           },
