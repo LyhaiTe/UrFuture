@@ -10,7 +10,8 @@ import {
   LayoutDashboard, 
   Map, 
   Compass, 
-  Briefcase 
+  Briefcase,
+  Loader2
 } from 'lucide-react';
 import UrFutureLogo from '@/components/UrFutureLogo';
 import DashboardWorkspace from '@/components/DashboardWorkspace';
@@ -191,13 +192,15 @@ export default function Home() {
   if (isInitializing) {
     return (
       <main className="min-h-screen bg-[#080d1a] flex flex-col items-center justify-center text-slate-400">
-        <div className="animate-pulse mb-4">
-          <UrFutureLogo variant="icon-only" size="lg" />
+        <div className="flex flex-col items-center justify-center">
+          <div className="mb-4">
+            <UrFutureLogo variant="icon-only" size="lg" />
+          </div>
+          <Loader2 className="w-6 h-6 text-[#00d2ff] animate-spin mb-3" />
+          <p className="text-xs font-bold tracking-widest text-slate-400 uppercase">
+            Loading UrFuture…
+          </p>
         </div>
-
-        <p className="text-xs font-semibold tracking-wider text-slate-400 uppercase">
-          Loading UrFuture…
-        </p>
       </main>
     );
   }

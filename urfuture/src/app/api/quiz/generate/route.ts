@@ -81,6 +81,7 @@ async function handlePost(req: NextRequest) {
           system: `${BASE_SYSTEM_PROMPT}\n\n${QUIZ_GENERATION_INSTRUCTIONS}`,
           userMessage: batchMessage,
           tool: GENERATE_QUIZ_TOOL,
+          throwOnError: true,
         });
         allQuestions.push(...(batchResult.questions || []));
       }
@@ -90,7 +91,21 @@ async function handlePost(req: NextRequest) {
         system: `${BASE_SYSTEM_PROMPT}\n\n${QUIZ_GENERATION_INSTRUCTIONS}`,
         userMessage,
         tool: GENERATE_QUIZ_TOOL,
+        throwOnError: true,
       });
+    }
+
+    // Guarantee requested question count even if LLM returns fewer questions
+    if (!result.questions || result.questions.length < requestedCount) {
+      console.warn(`LLM generated ${result.questions?.length ?? 0} questions out of ${requestedCount} requested. Supplementing with grounded fallback questions.`);
+      const fallbacks = buildFallbackQuestions(transcripts, requestedCount);
+      if (!result.questions || result.questions.length === 0) {
+        result = { questions: fallbacks };
+      } else {
+        // Keep valid AI questions and fill remaining quota with fallback lab/MC questions
+        const needed = requestedCount - result.questions.length;
+        result = { questions: [...result.questions, ...fallbacks.slice(0, needed)] };
+      }
     }
   } catch (error) {
     console.warn('AI quiz generation failed; using grounded fallback questions:', error);

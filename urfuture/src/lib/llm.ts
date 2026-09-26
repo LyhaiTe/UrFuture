@@ -2,11 +2,6 @@ import Groq from 'groq-sdk';
 import Anthropic from '@anthropic-ai/sdk';
 import type { Tool as AnthropicTool } from '@anthropic-ai/sdk/resources/messages';
 
-// ---------------------------------------------------------------------------
-// Helpers & Active Provider Detection
-// Supports Groq, Claude (Anthropic), and a Graceful Local Dev Fallback
-// ---------------------------------------------------------------------------
-
 export function isValidApiKey(key?: string): boolean {
   if (!key) return false;
   const trimmed = key.trim();
@@ -33,14 +28,10 @@ export function getActiveProvider(): 'groq' | 'anthropic' | 'fallback' {
 
 const rawModel = process.env.LLM_MODEL?.trim();
 const isGroq = isValidApiKey(process.env.GROQ_API_KEY);
-export const LLM_MODEL =
-  (rawModel && !rawModel.startsWith('openai/') && !rawModel.includes('gpt-oss') ? rawModel : null) ||
-  (isGroq ? 'llama-3.3-70b-versatile' : (process.env.CLAUDE_MODEL || 'claude-sonnet-4-6'));
 
-// ---------------------------------------------------------------------------
-// Tool (function-calling) definitions — OpenAI-compatible format
-// Each tool forces the model to emit a strict JSON shape instead of free prose.
-// ---------------------------------------------------------------------------
+export const LLM_MODEL =
+  rawModel ||
+  (isGroq ? 'openai/gpt-oss-20b' : (process.env.CLAUDE_MODEL || 'claude-sonnet-4-6'));
 
 interface ToolFunction {
   name: string;
