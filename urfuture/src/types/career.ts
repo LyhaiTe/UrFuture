@@ -138,4 +138,7 @@ export interface Career {
   matchedSkills: string[];
   skillsToStrengthen: string[];
   nextSteps: CareerNextStep[];
+  onetSocCode?: string;
+  onetElementId?: string;
+  onetImportance?: number;
 }

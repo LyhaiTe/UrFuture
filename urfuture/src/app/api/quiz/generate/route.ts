@@ -117,10 +117,14 @@ async function handlePost(req: NextRequest) {
   const questionIds: string[] = [];
   const questionMetadata = new Map<string, QuizGeneratedQuestion>();
   for (const q of result.questions) {
+    const mappedSkill = onetSkills.find((requirement) =>
+      requirement.skill.name.toLowerCase() === q.skillName.toLowerCase() ||
+      requirement.skill.onetElementId === q.onetElementId,
+    );
     const skill = await prisma.skill.upsert({
       where: { name: q.skillName },
-      update: {},
-      create: { name: q.skillName },
+      update: mappedSkill ? { onetElementId: mappedSkill.skill.onetElementId, category: mappedSkill.skill.category } : {},
+      create: { name: q.skillName, onetElementId: mappedSkill?.skill.onetElementId ?? q.onetElementId },
     });
     const created = await prisma.quizQuestion.create({
       data: {
@@ -148,7 +152,10 @@ async function handlePost(req: NextRequest) {
     },
   });
 
-  const questions = await prisma.quizQuestion.findMany({ where: { id: { in: questionIds } } });
+  const questions = await prisma.quizQuestion.findMany({
+    where: { id: { in: questionIds } },
+    include: { skill: true },
+  });
 
   return NextResponse.json({
     quizAttemptId: attempt.id,
