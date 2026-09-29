@@ -25,12 +25,33 @@ interface JobMatchResult {
   reviewReason?: string;
 }
 
-interface StudyPlanItem {
+interface StudyPlanResource {
+  title: string;
+  type: 'video' | 'reading' | 'practice' | 'course';
+  citation?: {
+    source: string;
+    reference: string;
+    claim: string;
+  };
+}
+
+interface StudyPlanWeek {
+  weekNumber: number;
+  focusSkill: string;
+  tasks: string[];
+  resources: StudyPlanResource[];
+}
+
+interface StudyPlanResult {
   id: string;
   title: string;
-  description: string;
-  priority: string;
-  estimatedDuration: string;
+  targetSkills: string[];
+  weeks: StudyPlanWeek[];
+  citations: {
+    source: string;
+    reference: string;
+    claim: string;
+  }[];
 }
 
 // Predefined job titles for Cambodian tech market
@@ -69,8 +90,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
   const [jobTitle, setJobTitle] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   const [result, setResult] = useState<JobMatchResult | null>(null);
-  const [studyPlan, setStudyPlan] = useState<StudyPlanItem[]>([]);
-  const [busy, setBusy] = useState(false);
+  const [studyPlan, setStudyPlan] = useState<StudyPlanResult | null>(null);  const [busy, setBusy] = useState(false);
   const [planBusy, setPlanBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [customTitle, setCustomTitle] = useState('');
@@ -103,8 +123,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
     setBusy(true);
     setError(null);
     setResult(null);
-    setStudyPlan([]);
-
+    setStudyPlan(null);
     try {
       const res = await fetch('/api/job/match', {
         method: 'POST',
@@ -160,13 +179,28 @@ export default function JobFitPanel({ userId }: { userId: string }) {
         }),
       });
 
-      const data = await res.json();
-
+      const data: {
+        error?: string;
+        studyPlan?: StudyPlanResult;
+      } = await res.json();
+      
       if (!res.ok) {
-        throw new Error(data.error || 'Could not generate study plan');
+        throw new Error(
+          data.error || 'Could not generate study plan'
+        );
       }
-
-      setStudyPlan(data.plan || data.studyPlan || []);
+      
+      if (
+        !data.studyPlan ||
+        !Array.isArray(data.studyPlan.weeks) ||
+        data.studyPlan.weeks.length === 0
+      ) {
+        throw new Error(
+          'Study plan service returned an incomplete plan.'
+        );
+      }
+      
+      setStudyPlan(data.studyPlan);
     } catch (e) {
       setError(
         e instanceof Error ? e.message : 'Could not generate study plan'
@@ -185,7 +219,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
     setShowCustomInput(false);
     setCustomTitle('');
     setResult(null);
-    setStudyPlan([]);
+    setStudyPlan(null);
     setError(null);
   }
 
@@ -286,7 +320,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
                   setCustomTitle('');
                 }
                 setResult(null);
-                setStudyPlan([]);
+                setStudyPlan(null);
                 setError(null);
               }}
               className="w-full appearance-none bg-[#081a2d] border border-[#314d69] rounded-xl px-4 py-3 pr-10 text-sm text-slate-100 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-900/40 transition cursor-pointer"
@@ -321,7 +355,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
                 onChange={(e) => {
                   setCustomTitle(e.target.value);
                   setResult(null);
-                  setStudyPlan([]);
+                  setStudyPlan(null);
                   setError(null);
                 }}
                 placeholder="e.g. Junior Robotics Engineer, Fintech Analyst"
@@ -345,7 +379,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
             onChange={(e) => {
               setJobDescription(e.target.value);
               setResult(null);
-              setStudyPlan([]);
+              setStudyPlan(null);
               setError(null);
             }}
             placeholder="Paste the job description or role requirements here..."
@@ -733,64 +767,95 @@ export default function JobFitPanel({ userId }: { userId: string }) {
 
             {/* Generated study plan */}
 
-            {studyPlan.length > 0 && (
+{studyPlan && (
+  <div className="mt-5">
 
-              <div className="space-y-3 mt-5">
+    <div className="mb-4">
+      <h4 className="text-sm font-semibold text-white">
+        {studyPlan.title}
+      </h4>
 
-                {studyPlan.map((item, index) => (
+      <p className="text-[11px] text-slate-400 mt-1">
+        Target skills: {studyPlan.targetSkills.join(', ')}
+      </p>
+    </div>
 
-                  <div
-                    key={item.id || index}
-                    className="bg-[#09111f] border border-[#1b2947] rounded-xl p-4"
-                  >
+    <div className="space-y-3">
+      {studyPlan.weeks.map((week) => (
+        <div
+          key={week.weekNumber}
+          className="bg-[#09111f] border border-[#1b2947] rounded-xl p-4"
+        >
+          <div className="flex gap-3">
 
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="w-9 h-9 rounded-lg bg-[#00d2ff]/10 text-[#00d2ff] flex items-center justify-center text-xs font-bold shrink-0">
+              {week.weekNumber}
+            </div>
 
-                      <div className="flex gap-3">
+            <div className="flex-1">
 
-                        <div className="w-7 h-7 rounded-lg bg-[#00d2ff]/10 text-[#00d2ff] flex items-center justify-center text-xs font-bold shrink-0">
-                          {index + 1}
-                        </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
 
-                        <div>
+                <h4 className="text-sm font-semibold text-white">
+                  Week {week.weekNumber}: {week.focusSkill}
+                </h4>
 
-                          <h4 className="text-sm font-semibold text-white">
-                            {item.title}
-                          </h4>
-
-                          <p className="text-xs text-slate-400 mt-1">
-                            {item.description}
-                          </p>
-
-                        </div>
-
-                      </div>
-
-                      <div className="flex items-center gap-2">
-
-                        {item.priority && (
-                          <span className="text-[10px] px-2 py-1 rounded-full bg-[#00d2ff]/10 text-[#00d2ff]">
-                            {item.priority}
-                          </span>
-                        )}
-
-                        {item.estimatedDuration && (
-                          <span className="text-[10px] text-slate-500">
-                            {item.estimatedDuration}
-                          </span>
-                        )}
-
-                      </div>
-
-                    </div>
-
-                  </div>
-
-                ))}
+                <span className="text-[10px] text-[#00d2ff]">
+                  {week.tasks.length}{' '}
+                  {week.tasks.length === 1 ? 'task' : 'tasks'}
+                </span>
 
               </div>
 
-            )}
+              <div className="mt-3 space-y-2">
+                {week.tasks.map((task, index) => (
+                  <div
+                    key={`${week.weekNumber}-task-${index}`}
+                    className="flex items-start gap-2"
+                  >
+                    <span className="text-[#34d399] text-xs mt-0.5">
+                      ✓
+                    </span>
+
+                    <p className="text-xs text-slate-300">
+                      {task}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {week.resources.length > 0 && (
+                <div className="mt-4">
+
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500">
+                    Resources
+                  </p>
+
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {week.resources.map((resource, index) => (
+                      <span
+                        key={`${week.weekNumber}-resource-${index}`}
+                        className="text-[10px] px-2.5 py-1.5 rounded-lg bg-[#0d2238] border border-[#1f3d5c] text-slate-300"
+                      >
+                        {resource.title}
+                        {' · '}
+                        {resource.type}
+                      </span>
+                    ))}
+                  </div>
+
+                </div>
+              )}
+
+            </div>
+
+          </div>
+        </div>
+      ))}
+    </div>
+
+  </div>
+)}
 
           </section>
 

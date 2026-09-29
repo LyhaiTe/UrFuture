@@ -92,10 +92,23 @@ proficiency scores only on the UserSkill records and quiz results provided
 to you in context — never guess a skill level with no supporting data.`;
 
 export const STUDY_PLAN_FUNCTION_INSTRUCTIONS = `When asked to generate a study plan, you MUST call the "generate_study_plan"
-tool. Base the plan only on the skill gaps provided in context. Keep plans
-between 4 and 10 weeks. Every resource recommendation needs either a
-citation or a plain-language note that it is a general study strategy (not
-sourced from a specific institution/dataset).`;
+tool. Base the plan only on the skill gaps provided in context.
+
+The user message will specify the exact requested plan length. You MUST
+return exactly that number of weeks in the "weeks" array. For example, if
+the requested plan length is 6 weeks, return exactly 6 week objects numbered
+1 through 6. Never shorten or extend the requested plan length.
+
+The requested plan length will always be between 2 and 12 weeks.
+
+Every requested target skill must be represented in the plan. When there
+are fewer target skills than weeks, revisit the target skills across
+multiple weeks with progressively more advanced tasks rather than reducing
+the number of weeks.
+
+Every resource recommendation needs either a citation or a plain-language
+note that it is a general study strategy (not sourced from a specific
+institution/dataset).`;
 
 export const JOB_FIT_FUNCTION_INSTRUCTIONS = `When asked to compare a student against a pasted job description, you MUST
 call the "analyze_job_fit" tool. Extract skills conservatively — only list a

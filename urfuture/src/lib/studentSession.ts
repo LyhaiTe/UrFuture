@@ -148,3 +148,38 @@ export async function getAuthenticatedStudent(
 
   return user;
 }
+
+export async function getAuthenticatedCounselor(
+    request: NextRequest
+  ) {
+    const token =
+      request.cookies.get(STUDENT_SESSION_COOKIE)?.value;
+  
+    if (!token) {
+      return null;
+    }
+  
+    const session =
+      verifyStudentSessionToken(token);
+  
+    if (!session) {
+      return null;
+    }
+  
+    const user =
+      await prisma.user.findUnique({
+        where: {
+          id: session.userId,
+        },
+      });
+  
+    if (
+      !user ||
+      (user.role !== 'COUNSELOR' &&
+        user.role !== 'ADMIN')
+    ) {
+      return null;
+    }
+  
+    return user;
+  }
