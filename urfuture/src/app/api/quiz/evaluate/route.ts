@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { getAuthenticatedStudent } from '@/lib/studentSession';
+import { validateQuizSubmissionAnswers } from '@/lib/quizSubmission';
 
 export const runtime = 'nodejs';
 
@@ -84,7 +85,7 @@ async function handlePost(req: NextRequest) {
   }
 
   // --------------------------------------------------
-  // 5. Validate assigned question IDs
+  // 5. Validate assigned question IDs and answer payloads
   // --------------------------------------------------
 
   const assignedQuestionIds =
@@ -95,61 +96,24 @@ async function handlePost(req: NextRequest) {
         )
       : [];
 
-  const submittedQuestionIds = answers.map(
-    (answer) => answer.questionId
-  );
+  const validation =
+    validateQuizSubmissionAnswers({
+      assignedQuestionIds,
+      answers,
+    });
 
-  // Reject duplicate question IDs
-  const uniqueSubmittedIds = new Set(
-    submittedQuestionIds
-  );
-
-  if (
-    uniqueSubmittedIds.size !==
-    submittedQuestionIds.length
-  ) {
+  if (!validation.ok) {
     return NextResponse.json(
       {
         error:
-          'Duplicate question submissions are not allowed.',
+          validation.error,
       },
       { status: 400 }
     );
   }
 
-  const assignedSet = new Set(
-    assignedQuestionIds
-  );
-
-  // Reject questions that were not assigned
-  const invalidQuestionIds =
-    submittedQuestionIds.filter(
-      (id) => !assignedSet.has(id)
-    );
-
-  if (invalidQuestionIds.length > 0) {
-    return NextResponse.json(
-      {
-        error:
-          'One or more submitted questions do not belong to this quiz attempt.',
-      },
-      { status: 400 }
-    );
-  }
-
-  // Require answers for all assigned questions
-  if (
-    submittedQuestionIds.length !==
-    assignedQuestionIds.length
-  ) {
-    return NextResponse.json(
-      {
-        error:
-          'All assigned quiz questions must be submitted.',
-      },
-      { status: 400 }
-    );
-  }
+  const normalizedAnswers =
+    validation.normalizedAnswers;
 
   // --------------------------------------------------
   // 6. Load assigned questions
@@ -198,7 +162,7 @@ async function handlePost(req: NextRequest) {
     }
   >();
 
-  const gradedAnswers = answers.map(
+  const gradedAnswers = normalizedAnswers.map(
     (answer) => {
       const question = questionById.get(
         answer.questionId

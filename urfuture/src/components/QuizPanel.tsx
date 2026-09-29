@@ -131,13 +131,11 @@ useEffect(() => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId,
           questionCount: selectedLength,
           ...(selectedCareerPathId
             ? { careerPathId: selectedCareerPathId }
             : {}),
         }),
-      
       });
       const responseText = await res.text();
       let data: { error?: string; detail?: string; questions?: QuizQuestion[]; quizAttemptId?: string };

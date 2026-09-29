@@ -131,7 +131,6 @@ export default function JobFitPanel({ userId }: { userId: string }) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId,
           jobTitle: effectiveTitle,
           jobDescription,
         }),
@@ -163,6 +162,12 @@ export default function JobFitPanel({ userId }: { userId: string }) {
   async function requestPrepPlan() {
     if (!result) return;
 
+    if (result.missingSkills.length === 0) {
+      setError('No skill gaps were detected, so a study plan is not needed right now.');
+      setStudyPlan(null);
+      return;
+    }
+
     setPlanBusy(true);
     setError(null);
 
@@ -173,8 +178,6 @@ export default function JobFitPanel({ userId }: { userId: string }) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId,
-          jobTitle: result.jobTitle,
           targetSkillNames: result.missingSkills.map((skill) => skill.skillName),
         }),
       });

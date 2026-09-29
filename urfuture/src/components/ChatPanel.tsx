@@ -315,7 +315,7 @@ export default function ChatPanel({
   const hydrateHistory = useCallback(async () => {
     setIsLoadingHistory(true);
     try {
-      const res = await fetch(`/api/chat/conversations?userId=${encodeURIComponent(userId)}`);
+      const res = await fetch('/api/chat/conversations');
       if (!res.ok) throw new Error('Failed to fetch conversations');
       const data = await res.json();
 
@@ -487,7 +487,7 @@ export default function ChatPanel({
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, conversationId, message: userMessage }),
+        body: JSON.stringify({ conversationId, message: userMessage }),
         signal: abortController.signal,
       });
 

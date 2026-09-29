@@ -34,7 +34,6 @@ export default function KnowledgeMapPanel({ userId }: { userId: string }) {
     setMessage(null);
     try {
       const form = new FormData();
-      form.append('userId', userId);
       form.append('yearLabel', yearLabel);
       form.append('file', file);
       const response = await fetch('/api/transcript/upload', { method: 'POST', body: form });
