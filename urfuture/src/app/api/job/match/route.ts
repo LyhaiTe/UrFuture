@@ -5,11 +5,11 @@ import { runToolCall, ANALYZE_JOB_FIT_TOOL } from '@/lib/llm';
 import { BASE_SYSTEM_PROMPT, JOB_FIT_FUNCTION_INSTRUCTIONS } from '@/lib/prompts';
 import { getStudentSkillContext, formatStudentSkillsForPrompt } from '@/lib/knowledgeBase';
 import type { JobFitResult } from '@/types';
+import { getAuthenticatedStudent } from '@/lib/studentSession';
 
 export const runtime = 'nodejs';
 
 const bodySchema = z.object({
-  userId: z.string(),
   jobTitle: z.string(),
   jobDescription: z.string().min(20),
 });
@@ -28,14 +28,27 @@ const bodySchema = z.object({
  * a study plan.
  */
 export async function POST(req: NextRequest) {
-  const parsed = bodySchema.safeParse(await req.json());
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  const { userId, jobTitle, jobDescription } = parsed.data;
+  const student = await getAuthenticatedStudent(req);
 
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
-  if (!user) {
-    return NextResponse.json({ error: 'Student account not found. Please sign in again.' }, { status: 404 });
+  if (!student) {
+    return NextResponse.json(
+      { error: 'Unauthenticated' },
+      { status: 401 }
+    );
   }
+
+  const userId = student.id;
+
+  const parsed = bodySchema.safeParse(await req.json());
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.flatten() },
+      { status: 400 }
+    );
+  }
+
+  const { jobTitle, jobDescription } = parsed.data;
 
   const skills = await getStudentSkillContext(userId);
   const skillContext = formatStudentSkillsForPrompt(skills);

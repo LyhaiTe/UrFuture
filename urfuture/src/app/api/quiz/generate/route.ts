@@ -5,11 +5,11 @@ import { runToolCall, GENERATE_QUIZ_TOOL } from '@/lib/llm';
 import { BASE_SYSTEM_PROMPT, QUIZ_GENERATION_INSTRUCTIONS } from '@/lib/prompts';
 import { getParsedTranscripts } from '@/lib/knowledgeBase';
 import type { QuizGeneratedQuestion } from '@/types';
+import { getAuthenticatedStudent } from '@/lib/studentSession';
 
 export const runtime = 'nodejs';
 
 const bodySchema = z.object({
-  userId: z.string(),
   careerPathId: z.string().optional(),
   major: z.string().trim().min(1).optional(),
   questionCount: z.number().min(3).max(60).optional(),
@@ -23,10 +23,33 @@ const bodySchema = z.object({
  * years/grades) and builds a diagnostic quiz strictly from
  * courses that actually appear in those transcripts.
  */
+
 async function handlePost(req: NextRequest) {
+  const student = await getAuthenticatedStudent(req);
+
+  if (!student) {
+    return NextResponse.json(
+      { error: 'Unauthenticated' },
+      { status: 401 }
+    );
+  }
+
+  const userId = student.id;
+
   const parsed = bodySchema.safeParse(await req.json());
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  const { userId, careerPathId, major, questionCount } = parsed.data;
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.flatten() },
+      { status: 400 }
+    );
+  }
+
+  const {
+    careerPathId,
+    major,
+    questionCount,
+  } = parsed.data;
   const selectedMajor = careerPathId
     ? await prisma.careerPath.findUnique({ where: { id: careerPathId } })
     : major
@@ -155,6 +178,7 @@ async function handlePost(req: NextRequest) {
       userId,
       careerPathId: selectedMajor?.id,
       basedOnTranscriptIds: transcripts.map((t) => t.id),
+      assignedQuestionIds: questionIds,
     },
   });
 
