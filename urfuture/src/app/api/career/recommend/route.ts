@@ -26,11 +26,11 @@ import {
 } from '@/lib/guardrails';
 import { retrieveRelevantContext } from '@/lib/rag';
 import type { SkillGapAnalysisResult } from '@/types';
+import { getAuthenticatedStudent } from '@/lib/studentSession';
 
 export const runtime = 'nodejs';
 
 const bodySchema = z.object({
-  userId: z.string(),
   careerTitle: z.string().optional(),
 });
 
@@ -40,11 +40,23 @@ const bodySchema = z.object({
  * Runs skill-gap analysis for one career, or all seeded careers if no
  * career is specified.
  *
+ * The authenticated student is derived from the server-side session.
  * AI output is runtime-validated before groundedness checking,
  * persistence, counselor-review creation, or display.
  */
 export async function POST(req: NextRequest) {
   try {
+    const student = await getAuthenticatedStudent(req);
+
+    if (!student) {
+      return NextResponse.json(
+        { error: 'Unauthenticated' },
+        { status: 401 },
+      );
+    }
+
+    const userId = student.id;
+
     const body = await req.json();
     const parsed = bodySchema.safeParse(body);
 
@@ -55,7 +67,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { userId, careerTitle } = parsed.data;
+    const { careerTitle } = parsed.data;
 
     const [careers, studentSkills] = await Promise.all([
       getCareerContext(careerTitle),
@@ -109,9 +121,6 @@ export async function POST(req: NextRequest) {
             SKILL_GAP_FUNCTION_INSTRUCTIONS,
           userMessage,
           tool: ANALYZE_SKILL_GAP_TOOL,
-
-          // Runtime validation happens before anything below
-          // can use or persist the provider response.
           schema: skillGapAnalysisSchema,
           validationLabel: 'career recommendation',
         });
@@ -138,7 +147,7 @@ export async function POST(req: NextRequest) {
           )}% (< 90% threshold) — needs human verification before being shown as final.`;
       }
 
-      // result has already passed skillGapAnalysisSchema here.
+      // The AI result has passed runtime validation before persistence.
       const saved =
         await prisma.careerRecommendation.create({
           data: {
@@ -201,7 +210,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error:
-          'Career recommendation is temporarily unavailable. Please try again.',
+          'Could not generate career recommendations. Please try again.',
       },
       { status: 500 },
     );

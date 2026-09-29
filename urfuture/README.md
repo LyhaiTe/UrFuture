@@ -44,8 +44,7 @@ VOYAGE_API_KEY="pa-..."
 # OR for 100% free offline dev with zero API keys or rate limits:
 # EMBEDDING_PROVIDER="local"
 ```
-*(Google OAuth, Pinecone, and GCS buckets are **optional** for local development. The app provides a 1-click demo login).*
-
+*(Google OAuth, Pinecone, and GCS buckets are **optional** for local development. Students sign in through the implemented authentication flow.)*
 ### 4. Start PostgreSQL with `pgvector`
 Ensure Docker Desktop is running, then run:
 ```bash

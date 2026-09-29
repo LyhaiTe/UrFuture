@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
-import { runToolCall, GENERATE_QUIZ_TOOL } from '@/lib/llm';
+import {
+  runToolCall,
+  GENERATE_QUIZ_TOOL,
+} from '@/lib/llm';
 import {
   quizGenerationSchema,
   InvalidAIResponseError,
@@ -12,28 +15,62 @@ import {
 } from '@/lib/prompts';
 import { getParsedTranscripts } from '@/lib/knowledgeBase';
 import type { QuizGeneratedQuestion } from '@/types';
+import { getAuthenticatedStudent } from '@/lib/studentSession';
 
 export const runtime = 'nodejs';
 
 const bodySchema = z.object({
-  userId: z.string(),
   careerPathId: z.string().optional(),
   major: z.string().trim().min(1).optional(),
-  questionCount: z.number().int().min(3).max(60).optional(),
+  questionCount: z
+    .number()
+    .int()
+    .min(3)
+    .max(60)
+    .optional(),
 });
 
 /**
  * POST /api/quiz/generate
  *
- * Generates a diagnostic quiz from the student's parsed coursework.
+ * Generates a diagnostic quiz from the authenticated
+ * student's parsed coursework.
  *
- * If a major is selected, the quiz is also aligned with that major
- * and its mapped O*NET skills.
+ * If a major is selected, the quiz is also aligned with
+ * that major and its mapped O*NET skills.
  *
- * AI responses are runtime-validated before any generated question
- * can be persisted.
+ * AI responses are runtime-validated before any generated
+ * question can be persisted.
  */
 async function handlePost(req: NextRequest) {
+  /*
+   * ------------------------------------------------------------
+   * Authenticate student
+   * ------------------------------------------------------------
+   */
+
+  const student =
+    await getAuthenticatedStudent(req);
+
+  if (!student) {
+    return NextResponse.json(
+      {
+        error: 'Unauthenticated',
+      },
+      {
+        status: 401,
+      },
+    );
+  }
+
+  const userId = student.id;
+
+  /*
+   * ------------------------------------------------------------
+   * Validate request
+   * ------------------------------------------------------------
+   */
+
   const parsed = bodySchema.safeParse(
     await req.json(),
   );
@@ -50,7 +87,6 @@ async function handlePost(req: NextRequest) {
   }
 
   const {
-    userId,
     careerPathId,
     major,
     questionCount,
@@ -89,8 +125,8 @@ async function handlePost(req: NextRequest) {
           );
 
   /*
-   * If the client explicitly supplied a major, make sure
-   * it exists and persist the selection for the student.
+   * If the client explicitly supplied a major,
+   * make sure it exists and persist the selection.
    */
   if (careerPathId || major) {
     if (!selectedMajor) {
@@ -222,8 +258,8 @@ async function handlePost(req: NextRequest) {
   try {
     if (requestedCount > 20) {
       /*
-       * Generate large quizzes in batches so we do not exceed
-       * provider token limits.
+       * Generate large quizzes in batches so we do not
+       * exceed provider token limits.
        */
       const batchSize = 20;
 
@@ -262,7 +298,7 @@ async function handlePost(req: NextRequest) {
             tool: GENERATE_QUIZ_TOOL,
 
             /*
-             * Validate the provider response before
+             * Validate provider response before
              * anything is persisted.
              */
             schema:
@@ -272,11 +308,6 @@ async function handlePost(req: NextRequest) {
                 i + 1
               }`,
 
-            /*
-             * Provider/network failures should be handled
-             * by this route rather than silently inside
-             * runToolCall.
-             */
             throwOnError: true,
           });
 
@@ -303,9 +334,6 @@ async function handlePost(req: NextRequest) {
           userMessage,
           tool: GENERATE_QUIZ_TOOL,
 
-          /*
-           * Runtime validation for normal-size quizzes.
-           */
           schema:
             quizGenerationSchema,
           validationLabel:
@@ -316,11 +344,9 @@ async function handlePost(req: NextRequest) {
     }
 
     /*
-     * The provider may return fewer questions than requested
-     * while still returning structurally valid questions.
-     *
-     * Fill the missing quota using our local,
-     * coursework-grounded generator.
+     * Provider may return fewer questions than requested.
+     * Fill the remaining quota with local grounded
+     * fallback questions.
      */
     if (
       result.questions.length <
@@ -352,10 +378,7 @@ async function handlePost(req: NextRequest) {
     }
 
     /*
-     * Validate the FINAL combined result too.
-     *
-     * This protects us even if a bug is introduced into
-     * buildFallbackQuestions later.
+     * Validate the final combined result too.
      */
     result =
       quizGenerationSchema.parse(
@@ -363,10 +386,7 @@ async function handlePost(req: NextRequest) {
       );
   } catch (error) {
     /*
-     * Invalid AI output is NOT allowed to fall through
-     * to persistence.
-     *
-     * This is required by Issue #34 Task 8.
+     * Invalid AI output must never reach persistence.
      */
     if (
       error instanceof
@@ -390,11 +410,8 @@ async function handlePost(req: NextRequest) {
     }
 
     /*
-     * Provider/network failure is different from malformed
-     * provider output.
-     *
-     * In this case it is safe to use our deterministic
-     * coursework-grounded local fallback.
+     * Provider/network failures may safely use
+     * the deterministic coursework-grounded fallback.
      */
     console.warn(
       'AI quiz generation failed; using grounded fallback questions:',
@@ -442,9 +459,6 @@ async function handlePost(req: NextRequest) {
    * ------------------------------------------------------------
    * Persist validated questions
    * ------------------------------------------------------------
-   *
-   * Nothing reaches this section unless the final quiz payload
-   * has passed quizGenerationSchema.
    */
 
   const questionIds: string[] = [];
@@ -556,8 +570,7 @@ async function handlePost(req: NextRequest) {
           ),
 
         /*
-         * Required by the current Prisma schema and used
-         * later to verify that submitted answers belong
+         * Used later to verify submitted answers belong
          * to this exact quiz attempt.
          */
         assignedQuestionIds:
@@ -647,8 +660,7 @@ async function handlePost(req: NextRequest) {
           false,
 
         /*
-         * correctIndex is intentionally NOT returned
-         * to the client.
+         * correctIndex intentionally NOT returned.
          */
       }),
     ),
@@ -821,8 +833,7 @@ function buildFallbackQuestions(
         'your uploaded coursework';
 
       /*
-       * Roughly 40% LAB questions in local fallback
-       * to keep practical question variety.
+       * Roughly 40% LAB questions in local fallback.
        */
       const isLabQuestion =
         index % 5 === 2 ||
@@ -913,7 +924,7 @@ export async function POST(
   } catch (error) {
     /*
      * Do not expose provider errors, stack traces,
-     * validation internals, or database details to clients.
+     * validation internals, or database details.
      */
     console.error(
       'Quiz generation failed:',

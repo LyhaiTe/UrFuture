@@ -20,14 +20,15 @@ import {
 } from '@/lib/knowledgeBase';
 import { retrieveRelevantContextForMany } from '@/lib/rag';
 import type { StudyPlanResult } from '@/types';
+import { getAuthenticatedStudent } from '@/lib/studentSession';
 
 export const runtime = 'nodejs';
 
 const bodySchema = z.object({
-  userId: z.string(),
   targetSkillNames: z
     .array(z.string().trim().min(1))
     .min(1),
+
   weeksRequested: z
     .number()
     .int()
@@ -40,20 +41,51 @@ const bodySchema = z.object({
  * POST /api/study-plan/generate
  *
  * Produces a personalized multi-week plan targeting
- * the student's identified skill gaps.
+ * the authenticated student's identified skill gaps.
  *
  * AI output is runtime-validated before citations are
  * merged, data is persisted, or the plan is displayed.
  */
 export async function POST(req: NextRequest) {
   try {
+    /*
+     * ------------------------------------------------------------
+     * Authenticate student
+     * ------------------------------------------------------------
+     */
+
+    const student =
+      await getAuthenticatedStudent(req);
+
+    if (!student) {
+      return NextResponse.json(
+        {
+          error: 'Unauthenticated',
+        },
+        {
+          status: 401,
+        },
+      );
+    }
+
+    const userId = student.id;
+
+    /*
+     * ------------------------------------------------------------
+     * Validate request
+     * ------------------------------------------------------------
+     */
+
     const body = await req.json();
-    const parsed = bodySchema.safeParse(body);
+
+    const parsed =
+      bodySchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
         {
-          error: parsed.error.flatten(),
+          error:
+            parsed.error.flatten(),
         },
         {
           status: 400,
@@ -62,36 +94,63 @@ export async function POST(req: NextRequest) {
     }
 
     const {
-      userId,
       targetSkillNames,
       weeksRequested,
     } = parsed.data;
 
+    /*
+     * ------------------------------------------------------------
+     * Load authenticated student's skills
+     * ------------------------------------------------------------
+     */
+
     const skills =
-      await getStudentSkillContext(userId);
+      await getStudentSkillContext(
+        userId,
+      );
 
     const skillContext =
-      formatStudentSkillsForPrompt(skills);
+      formatStudentSkillsForPrompt(
+        skills,
+      );
+
+    /*
+     * ------------------------------------------------------------
+     * Retrieve grounded curriculum context
+     * ------------------------------------------------------------
+     */
 
     const {
-      contextText: syllabusContext,
-      citations: syllabusCitations,
-    } = await retrieveRelevantContextForMany(
-      targetSkillNames,
-      {
-        category: 'ACADEMIC_SYLLABUS',
-      },
-    );
+      contextText:
+        syllabusContext,
 
-    const syllabusBlock = syllabusContext
-      ? `\n\nRELEVANT CURRICULUM / COURSE MATERIAL ` +
-        `(cite by SOURCE shown; note any resource you can't ` +
-        `ground this way as a general study strategy instead):\n` +
-        syllabusContext
-      : '';
+      citations:
+        syllabusCitations,
+    } =
+      await retrieveRelevantContextForMany(
+        targetSkillNames,
+        {
+          category:
+            'ACADEMIC_SYLLABUS',
+        },
+      );
+
+    const syllabusBlock =
+      syllabusContext
+        ? `\n\nRELEVANT CURRICULUM / COURSE MATERIAL ` +
+          `(cite by SOURCE shown; note any resource you can't ` +
+          `ground this way as a general study strategy instead):\n` +
+          syllabusContext
+        : '';
 
     const requestedWeeks =
       weeksRequested ?? 6;
+
+    /*
+     * ------------------------------------------------------------
+     * Build AI prompt
+     * ------------------------------------------------------------
+     */
 
     const userMessage =
       `STUDENT SKILL PROFILE:\n${skillContext}` +
@@ -101,33 +160,53 @@ export async function POST(req: NextRequest) {
       `${syllabusBlock}` +
       `\nCall generate_study_plan with your result.`;
 
+    /*
+     * ------------------------------------------------------------
+     * Generate + runtime validate AI response
+     * ------------------------------------------------------------
+     */
+
     const result =
       await runToolCall<StudyPlanResult>({
         system:
           `${BASE_SYSTEM_PROMPT}\n\n` +
           STUDY_PLAN_FUNCTION_INSTRUCTIONS,
-        userMessage,
-        tool: GENERATE_STUDY_PLAN_TOOL,
 
-        // Reject malformed plans before
-        // persistence or display.
-        schema: studyPlanSchema,
-        validationLabel: 'study plan',
+        userMessage,
+
+        tool:
+          GENERATE_STUDY_PLAN_TOOL,
+
+        /*
+         * Reject malformed plans before
+         * persistence or display.
+         */
+        schema:
+          studyPlanSchema,
+
+        validationLabel:
+          'study plan',
       });
 
     /*
+     * ------------------------------------------------------------
+     * Validate requested plan length
+     * ------------------------------------------------------------
+     *
      * The API supports 2-12 weeks.
-     * In addition to the schema's overall 2-12 limit,
-     * require the provider to honor the exact requested
+     * Require the provider to honor the exact requested
      * plan length.
      */
+
     if (
-      result.weeks.length !== requestedWeeks
+      result.weeks.length !==
+      requestedWeeks
     ) {
       console.error(
         '[ai-validation] Study plan returned incorrect number of weeks',
         {
           requestedWeeks,
+
           receivedWeeks:
             result.weeks.length,
         },
@@ -145,30 +224,45 @@ export async function POST(req: NextRequest) {
     }
 
     /*
-     * Make sure the generated plan still targets
-     * the requested skill gaps.
+     * ------------------------------------------------------------
+     * Validate requested target skills
+     * ------------------------------------------------------------
      */
+
     const normalizedRequestedSkills =
       new Set(
-        targetSkillNames.map((skill) =>
-          skill.trim().toLowerCase(),
+        targetSkillNames.map(
+          (skill) =>
+            skill
+              .trim()
+              .toLowerCase(),
         ),
       );
 
     const normalizedReturnedSkills =
       new Set(
-        result.targetSkills.map((skill) =>
-          skill.trim().toLowerCase(),
+        result.targetSkills.map(
+          (skill) =>
+            skill
+              .trim()
+              .toLowerCase(),
         ),
       );
 
     const missingTargetSkills =
-      [...normalizedRequestedSkills].filter(
+      [
+        ...normalizedRequestedSkills,
+      ].filter(
         (skill) =>
-          !normalizedReturnedSkills.has(skill),
+          !normalizedReturnedSkills.has(
+            skill,
+          ),
       );
 
-    if (missingTargetSkills.length > 0) {
+    if (
+      missingTargetSkills.length >
+      0
+    ) {
       console.error(
         '[ai-validation] Study plan omitted requested target skills',
         {
@@ -188,40 +282,72 @@ export async function POST(req: NextRequest) {
     }
 
     /*
-     * The provider citations have already passed
-     * citationSchema. Retrieval citations come from
-     * the trusted RAG layer.
+     * ------------------------------------------------------------
+     * Merge validated citations
+     * ------------------------------------------------------------
+     *
+     * Provider citations have passed citationSchema.
+     * Retrieval citations come from the trusted RAG layer.
      */
+
     const mergedCitations = [
       ...result.citations,
       ...syllabusCitations,
     ];
 
-    // Nothing reaches persistence until all validation
-    // above has succeeded.
+    /*
+     * ------------------------------------------------------------
+     * Persist validated study plan
+     * ------------------------------------------------------------
+     *
+     * Nothing reaches persistence until all validation
+     * above has succeeded.
+     */
+
     const saved =
       await prisma.studyPlan.create({
         data: {
           userId,
-          title: result.title,
+
+          title:
+            result.title,
+
           targetSkillIds:
             result.targetSkills,
+
           weeks:
             result.weeks as unknown as Prisma.InputJsonValue,
+
           citations:
             mergedCitations as unknown as Prisma.InputJsonValue,
-          status: 'DRAFT',
+
+          status:
+            'DRAFT',
         },
       });
+
+    /*
+     * ------------------------------------------------------------
+     * Return validated study plan
+     * ------------------------------------------------------------
+     */
 
     return NextResponse.json({
       studyPlan: {
         ...result,
-        citations: mergedCitations,
-        id: saved.id,
+
+        citations:
+          mergedCitations,
+
+        id:
+          saved.id,
       },
     });
   } catch (error) {
+    /*
+     * Invalid provider output receives a safe
+     * validation error and is never persisted.
+     */
     if (
       error instanceof
       InvalidAIResponseError

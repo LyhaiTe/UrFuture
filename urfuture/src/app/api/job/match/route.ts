@@ -18,11 +18,11 @@ import {
   formatStudentSkillsForPrompt,
 } from '@/lib/knowledgeBase';
 import type { JobFitResult } from '@/types';
+import { getAuthenticatedStudent } from '@/lib/studentSession';
 
 export const runtime = 'nodejs';
 
 const bodySchema = z.object({
-  userId: z.string(),
   jobTitle: z.string().trim().min(1),
   jobDescription: z.string().trim().min(20),
 });
@@ -30,13 +30,25 @@ const bodySchema = z.object({
 /**
  * POST /api/job/match
  *
- * Compares a student's known skills against a pasted job description.
+ * Compares the authenticated student's known skills against
+ * a pasted job description.
  *
  * The AI response is runtime-validated before normalization,
  * persistence, or display.
  */
 export async function POST(req: NextRequest) {
   try {
+    const student = await getAuthenticatedStudent(req);
+
+    if (!student) {
+      return NextResponse.json(
+        { error: 'Unauthenticated' },
+        { status: 401 },
+      );
+    }
+
+    const userId = student.id;
+
     const body = await req.json();
     const parsed = bodySchema.safeParse(body);
 
@@ -48,29 +60,9 @@ export async function POST(req: NextRequest) {
     }
 
     const {
-      userId,
       jobTitle,
       jobDescription,
     } = parsed.data;
-
-    const user = await prisma.user.findUnique({
-      where: {
-        id: userId,
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        {
-          error:
-            'Student account not found. Please sign in again.',
-        },
-        { status: 404 },
-      );
-    }
 
     const skills =
       await getStudentSkillContext(userId);
@@ -93,8 +85,8 @@ export async function POST(req: NextRequest) {
         userMessage,
         tool: ANALYZE_JOB_FIT_TOOL,
 
-        // Reject malformed/out-of-range AI output
-        // before it reaches normalization or persistence.
+        // Reject malformed or out-of-range AI output
+        // before normalization or persistence.
         schema: jobFitSchema,
         validationLabel: 'job fit analysis',
       });
@@ -135,8 +127,7 @@ export async function POST(req: NextRequest) {
       jobTitle:
         result.jobTitle || jobTitle,
 
-      // This is already guaranteed to be 0-100
-      // by jobFitSchema.
+      // Guaranteed to be 0-100 by jobFitSchema.
       fitScore: result.fitScorePercent,
 
       matchedSkills:
@@ -166,7 +157,7 @@ export async function POST(req: NextRequest) {
       reviewReason: undefined,
     };
 
-    // Only validated output can reach persistence.
+    // Only validated AI output can reach persistence.
     const saved =
       await prisma.jobFitCheck.create({
         data: {
