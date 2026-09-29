@@ -33,8 +33,6 @@ const TABS = [
 
 type Tab = (typeof TABS)[number]['label'];
 
-const STORAGE_KEY = 'urfuture_active_student_session';
-
 // Human-readable copy for the ?authError=<code> values the Google OAuth
 // routes redirect back with (see src/app/api/auth/google/callback/route.ts).
 const GOOGLE_AUTH_ERROR_MESSAGES: Record<string, string> = {
@@ -64,26 +62,48 @@ export default function Home() {
   // RESTORE SAVED STUDENT SESSION
   // ================================================================
 
-  useEffect(() => {
+  // ================================================================
+// RESTORE VERIFIED STUDENT SESSION
+// ================================================================
+
+useEffect(() => {
+  const restoreSession = async () => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-
-      if (saved) {
-        const parsed = JSON.parse(saved);
-
-        if (parsed && parsed.id) {
-          setCurrentUser(parsed);
+      const response = await fetch(
+        '/api/auth/student/session',
+        {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
         }
+      );
+
+      if (!response.ok) {
+        setCurrentUser(null);
+        return;
       }
-    } catch (e) {
+
+      const data = await response.json();
+
+      if (data.success && data.user) {
+        setCurrentUser(data.user);
+      } else {
+        setCurrentUser(null);
+      }
+    } catch (error) {
       console.warn(
         'Could not restore student session:',
-        e
+        error
       );
+
+      setCurrentUser(null);
     } finally {
       setIsInitializing(false);
     }
-  }, []);
+  };
+
+  void restoreSession();
+}, []);
 
   // ================================================================
   // CLOSE USER MENU WHEN CLICKING OUTSIDE
@@ -134,19 +154,6 @@ export default function Home() {
     user: StudentUser
   ) => {
     setCurrentUser(user);
-
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(user)
-      );
-    } catch (e) {
-      console.warn(
-        'Failed to save session locally',
-        e
-      );
-    }
-
     setTab('Workspace');
   };
 
@@ -154,17 +161,23 @@ export default function Home() {
   // LOG OUT
   // ================================================================
 
-  const handleLogOut = () => {
+  const handleLogOut = async () => {
     try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch (e) {
-      console.warn(e);
+      await fetch('/api/auth/student/session', {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+    } catch (error) {
+      console.warn(
+        'Failed to clear server session:',
+        error
+      );
+    } finally {
+      setCurrentUser(null);
+      setIsUserMenuOpen(false);
+      setIsCopilotOpen(false);
+      setTab('Workspace');
     }
-
-    setCurrentUser(null);
-    setIsUserMenuOpen(false);
-    setIsCopilotOpen(false);
-    setTab('Workspace');
   };
 
   // ================================================================

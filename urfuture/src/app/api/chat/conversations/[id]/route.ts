@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { getAuthenticatedStudent } from '@/lib/studentSession';
 
 export const runtime = 'nodejs';
 
@@ -9,60 +10,103 @@ interface Params {
   };
 }
 
-export async function GET(_req: NextRequest, { params }: Params) {
+/**
+ * GET /api/chat/conversations/[id]
+ * Returns a conversation only when it belongs to
+ * the authenticated student.
+ */
+export async function GET(
+  req: NextRequest,
+  { params }: Params
+) {
+  const student = await getAuthenticatedStudent(req);
+
+  if (!student) {
+    return NextResponse.json(
+      { error: 'Unauthenticated' },
+      { status: 401 }
+    );
+  }
+
   const { id } = params;
 
   if (!id) {
-    return NextResponse.json({ error: 'Conversation id is required' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Conversation id is required' },
+      { status: 400 }
+    );
   }
 
-  const conversation = await prisma.conversation.findUnique({
-    where: { id },
-    include: {
-      messages: {
-        orderBy: { createdAt: 'asc' },
+  const conversation =
+    await prisma.conversation.findFirst({
+      where: {
+        id,
+        userId: student.id,
       },
-    },
-  });
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
 
   if (!conversation) {
-    return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
+    return NextResponse.json(
+      { error: 'Conversation not found' },
+      { status: 404 }
+    );
   }
 
-  const formattedMessages = conversation.messages.map((m) => {
-    let toolCallsParsed: unknown[] | undefined;
-    if (m.toolCalls) {
-      try {
-        toolCallsParsed = typeof m.toolCalls === 'string' ? JSON.parse(m.toolCalls) : (m.toolCalls as unknown[]);
-      } catch {
-        toolCallsParsed = undefined;
-      }
-    }
+  const formattedMessages =
+    conversation.messages.map((message) => {
+      let toolCallsParsed:
+        | unknown[]
+        | undefined;
 
-    let citationsParsed: unknown[] | undefined;
-    if (m.citations) {
-      try {
-        citationsParsed = typeof m.citations === 'string' ? JSON.parse(m.citations) : (m.citations as unknown[]);
-      } catch {
-        citationsParsed = undefined;
+      if (message.toolCalls) {
+        try {
+          toolCallsParsed =
+            typeof message.toolCalls === 'string'
+              ? JSON.parse(message.toolCalls)
+              : (message.toolCalls as unknown[]);
+        } catch {
+          toolCallsParsed = undefined;
+        }
       }
-    }
 
-    return {
-      id: m.id,
-      role: m.role.toLowerCase() === 'assistant' ? 'assistant' : 'user',
-      content: m.content,
-      toolCalls: toolCallsParsed,
-      citations: citationsParsed,
-      createdAt: m.createdAt,
-    };
-  });
+      let citationsParsed:
+        | unknown[]
+        | undefined;
+
+      if (message.citations) {
+        try {
+          citationsParsed =
+            typeof message.citations === 'string'
+              ? JSON.parse(message.citations)
+              : (message.citations as unknown[]);
+        } catch {
+          citationsParsed = undefined;
+        }
+      }
+
+      return {
+        id: message.id,
+        role:
+          message.role.toLowerCase() ===
+          'assistant'
+            ? ('assistant' as const)
+            : ('user' as const),
+        content: message.content,
+        toolCalls: toolCallsParsed,
+        citations: citationsParsed,
+        createdAt: message.createdAt,
+      };
+    });
 
   return NextResponse.json({
     conversation: {
       id: conversation.id,
       title: conversation.title,
-      userId: conversation.userId,
       createdAt: conversation.createdAt,
       updatedAt: conversation.updatedAt,
       messages: formattedMessages,
@@ -72,22 +116,69 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
 /**
  * DELETE /api/chat/conversations/[id]
- * Deletes a conversation and its cascaded messages.
+ * Deletes a conversation only when it belongs to
+ * the authenticated student.
  */
-export async function DELETE(_req: NextRequest, { params }: Params) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: Params
+) {
+  const student = await getAuthenticatedStudent(req);
+
+  if (!student) {
+    return NextResponse.json(
+      { error: 'Unauthenticated' },
+      { status: 401 }
+    );
+  }
+
   const { id } = params;
 
   if (!id) {
-    return NextResponse.json({ error: 'Conversation id is required' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Conversation id is required' },
+      { status: 400 }
+    );
+  }
+
+  const conversation =
+    await prisma.conversation.findFirst({
+      where: {
+        id,
+        userId: student.id,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+  if (!conversation) {
+    return NextResponse.json(
+      { error: 'Conversation not found' },
+      { status: 404 }
+    );
   }
 
   try {
     await prisma.conversation.delete({
-      where: { id },
+      where: {
+        id: conversation.id,
+      },
     });
-    return NextResponse.json({ success: true, id });
+
+    return NextResponse.json({
+      success: true,
+      id: conversation.id,
+    });
   } catch (error) {
-    console.error('Failed to delete conversation:', error);
-    return NextResponse.json({ error: 'Failed to delete conversation' }, { status: 500 });
+    console.error(
+      'Failed to delete conversation:',
+      error
+    );
+
+    return NextResponse.json(
+      { error: 'Failed to delete conversation' },
+      { status: 500 }
+    );
   }
 }

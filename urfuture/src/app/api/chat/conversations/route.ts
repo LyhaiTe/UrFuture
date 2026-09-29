@@ -1,17 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
+import { getAuthenticatedStudent } from '@/lib/studentSession';
 
 export const runtime = 'nodejs';
 
+/**
+ * GET /api/chat/conversations
+ * Returns conversations belonging only to the authenticated student.
+ */
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const userId = searchParams.get('userId');
-  const conversationId = searchParams.get('conversationId');
+  const student = await getAuthenticatedStudent(req);
 
-  if (!userId) {
-    return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+  if (!student) {
+    return NextResponse.json(
+      { error: 'Unauthenticated' },
+      { status: 401 }
+    );
   }
+
+  const userId = student.id;
+
+  const { searchParams } = new URL(req.url);
+  const conversationId = searchParams.get('conversationId');
 
   const [user, conversations] = await Promise.all([
     prisma.user.findUnique({
@@ -24,6 +35,7 @@ export async function GET(req: NextRequest) {
         institution: true,
       },
     }),
+
     prisma.conversation.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },
@@ -45,13 +57,16 @@ export async function GET(req: NextRequest) {
   ]);
 
   if (!user) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    return NextResponse.json(
+      { error: 'User not found' },
+      { status: 404 }
+    );
   }
 
-  // Determine active conversation:
-  // 1. If conversationId explicitly passed, use it.
-  // 2. Otherwise default to the most recent conversation if one exists.
-  const targetConvoId = conversationId ?? conversations[0]?.id;
+  // If a conversation ID is provided, it must belong to
+  // the authenticated student.
+  const targetConvoId =
+    conversationId ?? conversations[0]?.id;
 
   let activeConversation: {
     id: string;
@@ -69,14 +84,18 @@ export async function GET(req: NextRequest) {
   } | null = null;
 
   if (targetConvoId) {
-    const fullTarget = await prisma.conversation.findFirst({
-      where: { id: targetConvoId, userId },
-      include: {
-        messages: {
-          orderBy: { createdAt: 'asc' },
+    const fullTarget =
+      await prisma.conversation.findFirst({
+        where: {
+          id: targetConvoId,
+          userId,
         },
-      },
-    });
+        include: {
+          messages: {
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      });
 
     if (fullTarget) {
       activeConversation = {
@@ -84,20 +103,33 @@ export async function GET(req: NextRequest) {
         title: fullTarget.title,
         createdAt: fullTarget.createdAt,
         updatedAt: fullTarget.updatedAt,
+
         messages: fullTarget.messages.map((m) => {
-          let toolCallsParsed: unknown[] | undefined;
+          let toolCallsParsed:
+            | unknown[]
+            | undefined;
+
           if (m.toolCalls) {
             try {
-              toolCallsParsed = typeof m.toolCalls === 'string' ? JSON.parse(m.toolCalls) : (m.toolCalls as unknown[]);
+              toolCallsParsed =
+                typeof m.toolCalls === 'string'
+                  ? JSON.parse(m.toolCalls)
+                  : (m.toolCalls as unknown[]);
             } catch {
               toolCallsParsed = undefined;
             }
           }
 
-          let citationsParsed: unknown[] | undefined;
+          let citationsParsed:
+            | unknown[]
+            | undefined;
+
           if (m.citations) {
             try {
-              citationsParsed = typeof m.citations === 'string' ? JSON.parse(m.citations) : (m.citations as unknown[]);
+              citationsParsed =
+                typeof m.citations === 'string'
+                  ? JSON.parse(m.citations)
+                  : (m.citations as unknown[]);
             } catch {
               citationsParsed = undefined;
             }
@@ -105,7 +137,10 @@ export async function GET(req: NextRequest) {
 
           return {
             id: m.id,
-            role: m.role.toLowerCase() === 'assistant' ? 'assistant' : 'user',
+            role:
+              m.role.toLowerCase() === 'assistant'
+                ? ('assistant' as const)
+                : ('user' as const),
             content: m.content,
             toolCalls: toolCallsParsed,
             citations: citationsParsed,
@@ -116,14 +151,23 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const conversationSummaries = conversations.map((c) => ({
-    id: c.id,
-    title: c.title || 'Untitled conversation',
-    createdAt: c.createdAt,
-    updatedAt: c.updatedAt,
-    messageCount: c._count.messages,
-    preview: c.messages[0]?.content ? c.messages[0].content.slice(0, 80) : '',
-  }));
+  const conversationSummaries =
+    conversations.map((conversation) => ({
+      id: conversation.id,
+      title:
+        conversation.title ||
+        'Untitled conversation',
+      createdAt: conversation.createdAt,
+      updatedAt: conversation.updatedAt,
+      messageCount:
+        conversation._count.messages,
+      preview: conversation.messages[0]?.content
+        ? conversation.messages[0].content.slice(
+            0,
+            80
+          )
+        : '',
+    }));
 
   return NextResponse.json({
     user,
@@ -133,29 +177,45 @@ export async function GET(req: NextRequest) {
 }
 
 const createSchema = z.object({
-  userId: z.string(),
   title: z.string().optional(),
 });
 
 /**
  * POST /api/chat/conversations
- * Explicitly initializes a fresh conversation thread for the user.
+ * Creates a conversation belonging only to the
+ * authenticated student.
  */
 export async function POST(req: NextRequest) {
-  const json = await req.json();
-  const parsed = createSchema.safeParse(json);
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  const student = await getAuthenticatedStudent(req);
+
+  if (!student) {
+    return NextResponse.json(
+      { error: 'Unauthenticated' },
+      { status: 401 }
+    );
   }
 
-  const { userId, title } = parsed.data;
+  const userId = student.id;
 
-  const conversation = await prisma.conversation.create({
-    data: {
-      userId,
-      title: title ?? 'New Conversation',
-    },
-  });
+  const json = await req.json();
+  const parsed = createSchema.safeParse(json);
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.flatten() },
+      { status: 400 }
+    );
+  }
+
+  const { title } = parsed.data;
+
+  const conversation =
+    await prisma.conversation.create({
+      data: {
+        userId,
+        title: title ?? 'New Conversation',
+      },
+    });
 
   return NextResponse.json({
     conversation: {

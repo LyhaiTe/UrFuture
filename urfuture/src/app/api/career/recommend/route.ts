@@ -8,11 +8,11 @@ import { getCareerContext, getStudentSkillContext, formatCareerContextForPrompt,
 import { flagForCounselorReview, estimateGroundednessAgainstChunks } from '@/lib/guardrails';
 import { retrieveRelevantContext } from '@/lib/rag';
 import type { SkillGapAnalysisResult } from '@/types';
+import { getAuthenticatedStudent } from '@/lib/studentSession';
 
 export const runtime = 'nodejs';
 
 const bodySchema = z.object({
-  userId: z.string(),
   careerTitle: z.string().optional(), // if omitted, ranks across all seeded careers
 });
 
@@ -24,9 +24,27 @@ const bodySchema = z.object({
  * high-stakes transition.
  */
 export async function POST(req: NextRequest) {
+  const student = await getAuthenticatedStudent(req);
+
+  if (!student) {
+    return NextResponse.json(
+      { error: 'Unauthenticated' },
+      { status: 401 }
+    );
+  }
+
+  const userId = student.id;
+
   const parsed = bodySchema.safeParse(await req.json());
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  const { userId, careerTitle } = parsed.data;
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.flatten() },
+      { status: 400 }
+    );
+  }
+
+  const { careerTitle } = parsed.data;
 
   const [careers, studentSkills] = await Promise.all([
     getCareerContext(careerTitle),

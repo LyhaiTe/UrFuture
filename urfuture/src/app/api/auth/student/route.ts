@@ -1,38 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { promisify } from 'node:util';
-import { randomBytes, scrypt as callbackScrypt, timingSafeEqual } from 'node:crypto';
+import {
+  randomBytes,
+  scrypt as callbackScrypt,
+  timingSafeEqual,
+} from 'node:crypto';
 import { EducationLevel } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { StudentUser } from '@/types';
+import { setStudentSessionCookie } from '@/lib/studentSession';
 
 export const runtime = 'nodejs';
 
 const scrypt = promisify(callbackScrypt);
 const educationLevels = new Set(Object.values(EducationLevel));
-const strongPasswordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+const strongPasswordPattern =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 
-function isEducationLevel(value: string | undefined): value is EducationLevel {
-  return Boolean(value && educationLevels.has(value as EducationLevel));
+function isEducationLevel(
+  value: string | undefined
+): value is EducationLevel {
+  return Boolean(
+    value && educationLevels.has(value as EducationLevel)
+  );
 }
 
 async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString('hex');
-  const derivedKey = (await scrypt(password, salt, 64)) as Buffer;
+  const derivedKey = (await scrypt(
+    password,
+    salt,
+    64
+  )) as Buffer;
+
   return `${salt}:${derivedKey.toString('hex')}`;
 }
 
-async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+async function verifyPassword(
+  password: string,
+  storedHash: string
+): Promise<boolean> {
   const [salt, keyHex] = storedHash.split(':');
-  if (!salt || !keyHex) return false;
+
+  if (!salt || !keyHex) {
+    return false;
+  }
 
   const expectedKey = Buffer.from(keyHex, 'hex');
-  const derivedKey = (await scrypt(password, salt, expectedKey.length)) as Buffer;
-  return expectedKey.length === derivedKey.length && timingSafeEqual(expectedKey, derivedKey);
+
+  const derivedKey = (await scrypt(
+    password,
+    salt,
+    expectedKey.length
+  )) as Buffer;
+
+  return (
+    expectedKey.length === derivedKey.length &&
+    timingSafeEqual(expectedKey, derivedKey)
+  );
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+
     const {
       action,
       email,
@@ -50,22 +81,32 @@ export async function POST(req: NextRequest) {
     };
 
     const normalizedEmail = email?.trim().toLowerCase();
+
     const validEducationLevel = isEducationLevel(educationLevel)
       ? educationLevel
       : EducationLevel.UNIVERSITY_YEAR_2;
+
     if (!normalizedEmail || !password) {
       return NextResponse.json(
-        { success: false, error: 'Email and password are required.' },
+        {
+          success: false,
+          error: 'Email and password are required.',
+        },
         { status: 400 }
       );
     }
+
+    // ============================================================
+    // REGISTER
+    // ============================================================
 
     if (action === 'register') {
       if (!strongPasswordPattern.test(password)) {
         return NextResponse.json(
           {
             success: false,
-            error: 'Password must be at least 8 characters and include an uppercase letter, lowercase letter, number, and symbol.',
+            error:
+              'Password must be at least 8 characters and include an uppercase letter, lowercase letter, number, and symbol.',
           },
           { status: 400 }
         );
@@ -73,15 +114,27 @@ export async function POST(req: NextRequest) {
 
       if (!name?.trim()) {
         return NextResponse.json(
-          { success: false, error: 'Full name is required to register.' },
+          {
+            success: false,
+            error: 'Full name is required to register.',
+          },
           { status: 400 }
         );
       }
 
-      const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+      const existingUser = await prisma.user.findUnique({
+        where: {
+          email: normalizedEmail,
+        },
+      });
+
       if (existingUser) {
         return NextResponse.json(
-          { success: false, error: 'An account with this email already exists. Please sign in.' },
+          {
+            success: false,
+            error:
+              'An account with this email already exists. Please sign in.',
+          },
           { status: 409 }
         );
       }
@@ -97,49 +150,87 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      return NextResponse.json({
+      const response = NextResponse.json({
         success: true,
         user: {
           id: user.id,
           name: user.name,
           email: user.email,
           role: user.role,
-          educationLevel: user.educationLevel || 'UNIVERSITY_YEAR_2',
-          institution: user.institution || 'CamTech University',
+          educationLevel:
+            user.educationLevel || 'UNIVERSITY_YEAR_2',
+          institution:
+            user.institution || 'CamTech University',
         } satisfies StudentUser,
       });
+
+      // Create the signed HttpOnly server session.
+      setStudentSessionCookie(response, user.id);
+
+      return response;
     }
+
+    // ============================================================
+    // LOGIN
+    // ============================================================
 
     if (action !== 'login') {
       return NextResponse.json(
-        { success: false, error: 'Choose registration or sign in.' },
+        {
+          success: false,
+          error: 'Choose registration or sign in.',
+        },
         { status: 400 }
       );
     }
 
-    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-    if (!user || !user.passwordHash || !(await verifyPassword(password, user.passwordHash))) {
+    const user = await prisma.user.findUnique({
+      where: {
+        email: normalizedEmail,
+      },
+    });
+
+    if (
+      !user ||
+      !user.passwordHash ||
+      !(await verifyPassword(password, user.passwordHash))
+    ) {
       return NextResponse.json(
-        { success: false, error: 'No matching account found. Please register first or check your credentials.' },
+        {
+          success: false,
+          error:
+            'No matching account found. Please register first or check your credentials.',
+        },
         { status: 401 }
       );
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
-        educationLevel: user.educationLevel || 'UNIVERSITY_YEAR_2',
-        institution: user.institution || 'CamTech University',
+        educationLevel:
+          user.educationLevel || 'UNIVERSITY_YEAR_2',
+        institution:
+          user.institution || 'CamTech University',
       } satisfies StudentUser,
     });
+
+    // Create the signed HttpOnly server session.
+    setStudentSessionCookie(response, user.id);
+
+    return response;
   } catch (error: unknown) {
     console.error('Auth route error:', error);
+
     return NextResponse.json(
-      { success: false, error: 'Authentication failed. Please try again.' },
+      {
+        success: false,
+        error: 'Authentication failed. Please try again.',
+      },
       { status: 500 }
     );
   }

@@ -7,11 +7,11 @@ import { BASE_SYSTEM_PROMPT, STUDY_PLAN_FUNCTION_INSTRUCTIONS } from '@/lib/prom
 import { getStudentSkillContext, formatStudentSkillsForPrompt } from '@/lib/knowledgeBase';
 import { retrieveRelevantContextForMany } from '@/lib/rag';
 import type { StudyPlanResult } from '@/types';
+import { getAuthenticatedStudent } from '@/lib/studentSession';
 
 export const runtime = 'nodejs';
 
 const bodySchema = z.object({
-  userId: z.string(),
   targetSkillNames: z.array(z.string()).min(1),
   weeksRequested: z.number().min(2).max(12).optional(),
 });
@@ -22,9 +22,27 @@ const bodySchema = z.object({
  * /api/career/recommend or /api/job/match.
  */
 export async function POST(req: NextRequest) {
+  const student = await getAuthenticatedStudent(req);
+
+  if (!student) {
+    return NextResponse.json(
+      { error: 'Unauthenticated' },
+      { status: 401 }
+    );
+  }
+
+  const userId = student.id;
+
   const parsed = bodySchema.safeParse(await req.json());
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  const { userId, targetSkillNames, weeksRequested } = parsed.data;
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.flatten() },
+      { status: 400 }
+    );
+  }
+
+  const { targetSkillNames, weeksRequested } = parsed.data;
 
   const skills = await getStudentSkillContext(userId);
   const skillContext = formatStudentSkillsForPrompt(skills);
