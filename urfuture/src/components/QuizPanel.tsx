@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { ClipboardCheck, Code2, FlaskConical, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface QuizQuestion {
@@ -21,6 +21,10 @@ interface QuizPanelProps {
 }
 
 type QuizLength = 15 | 30 | 60;
+interface CareerPathOption {
+  id: string;
+  title: string;
+}
 
 const QUIZ_LENGTH_OPTIONS: { value: QuizLength; label: string; desc: string }[] = [
   { value: 15, label: '15 Questions', desc: 'Quick Diagnostic ~10 mins' },
@@ -39,6 +43,73 @@ export default function QuizPanel({ userId, onQuizCompleted, onNavigateToCareers
   const [error, setError] = useState<string | null>(null);
   const [selectedLength, setSelectedLength] = useState<QuizLength>(15);
   const [currentPage, setCurrentPage] = useState(0);
+  const [careerPaths, setCareerPaths] = useState<CareerPathOption[]>([]);
+const [selectedCareerPathId, setSelectedCareerPathId] = useState('');
+const [loadingCareerPaths, setLoadingCareerPaths] = useState(true);
+const [careerPathsError, setCareerPathsError] = useState<string | null>(null);
+
+useEffect(() => {
+  let cancelled = false;
+
+  async function loadCareerPaths() {
+    setLoadingCareerPaths(true);
+    setCareerPathsError(null);
+
+    try {
+      const res = await fetch('/api/career/paths', {
+        method: 'GET',
+        cache: 'no-store'
+           });
+
+      const responseText = await res.text();
+
+      let data: {
+        error?: string;
+        careerPaths?: CareerPathOption[];
+      };
+
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        throw new Error(
+          `Major service returned an unexpected response (${res.status}).`,
+        );
+      }
+
+      if (!res.ok) {
+        throw new Error(
+          data.error || 'Could not load available majors.',
+        );
+      }
+
+      if (!cancelled) {
+        setCareerPaths(
+          Array.isArray(data.careerPaths)
+            ? data.careerPaths
+            : [],
+        );
+      }
+    } catch (e) {
+      if (!cancelled) {
+        setCareerPathsError(
+          e instanceof Error
+            ? e.message
+            : 'Could not load available majors.',
+        );
+      }
+    } finally {
+      if (!cancelled) {
+        setLoadingCareerPaths(false);
+      }
+    }
+  }
+
+  void loadCareerPaths();
+
+  return () => {
+    cancelled = true;
+  };
+}, []);
 
   const totalPages = Math.ceil(questions.length / QUESTIONS_PER_PAGE);
   const pagedQuestions = useMemo(() => {
@@ -59,7 +130,14 @@ export default function QuizPanel({ userId, onQuizCompleted, onNavigateToCareers
       const res = await fetch('/api/quiz/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, questionCount: selectedLength }),
+        body: JSON.stringify({
+          userId,
+          questionCount: selectedLength,
+          ...(selectedCareerPathId
+            ? { careerPathId: selectedCareerPathId }
+            : {}),
+        }),
+      
       });
       const responseText = await res.text();
       let data: { error?: string; detail?: string; questions?: QuizQuestion[]; quizAttemptId?: string };
@@ -160,6 +238,65 @@ export default function QuizPanel({ userId, onQuizCompleted, onNavigateToCareers
               Upload your course transcripts above, then select a quiz length and click &ldquo;Generate Quiz&rdquo; to test your actual competency levels.
             </p>
           </div>
+
+{/* Major Selector */}
+<div className="max-w-xl mx-auto mb-6">
+  <div className="flex items-center justify-between mb-2">
+    <label
+      htmlFor="quiz-major"
+      className="text-xs font-semibold text-slate-200"
+    >
+      Select Major
+    </label>
+
+    <span className="text-[10px] text-slate-500">
+      Optional
+    </span>
+  </div>
+
+  <select
+    id="quiz-major"
+    value={selectedCareerPathId}
+    onChange={(e) => setSelectedCareerPathId(e.target.value)}
+    disabled={loadingCareerPaths}
+    className="w-full rounded-xl border border-[#1b2b4d] bg-[#0d1629] px-4 py-3 text-sm text-white outline-none transition-colors focus:border-[#00d2ff] disabled:opacity-50"
+  >
+    <option value="">
+      {loadingCareerPaths
+        ? 'Loading majors...'
+        : 'Coursework Only'}
+    </option>
+
+    {careerPaths.map((careerPath) => (
+      <option
+        key={careerPath.id}
+        value={careerPath.id}
+      >
+        {careerPath.title}
+      </option>
+    ))}
+  </select>
+
+  {careerPathsError ? (
+    <p className="mt-2 text-[11px] text-red-400">
+      {careerPathsError}
+    </p>
+  ) : (
+    <p className="mt-2 text-[11px] text-slate-500">
+      Choose a major to tailor quiz questions toward that career,
+      or use Coursework Only for a transcript-based quiz.
+    </p>
+  )}
+
+  {!loadingCareerPaths &&
+    !careerPathsError &&
+    careerPaths.length === 0 && (
+      <p className="mt-2 text-[11px] text-amber-400">
+        No majors are currently available. Coursework Only can
+        still be used.
+      </p>
+    )}
+</div>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             {QUIZ_LENGTH_OPTIONS.map((opt) => (

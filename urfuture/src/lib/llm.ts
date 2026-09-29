@@ -1,6 +1,11 @@
 import Groq from 'groq-sdk';
 import Anthropic from '@anthropic-ai/sdk';
 import type { Tool as AnthropicTool } from '@anthropic-ai/sdk/resources/messages';
+import { z } from 'zod';
+import {
+  InvalidAIResponseError,
+  validateAIResponse,
+} from '@/lib/aiValidation';
 
 export function isValidApiKey(key?: string): boolean {
   if (!key) return false;
@@ -253,6 +258,7 @@ function toClaudeTool(tool: LLMTool): AnthropicTool {
   };
 }
 
+
 // ---------------------------------------------------------------------------
 // Tool Call Execution with Fallback
 // ---------------------------------------------------------------------------
@@ -261,62 +267,151 @@ export async function runToolCall<T>(opts: {
   system: string;
   userMessage: string;
   tool: LLMTool;
+  schema?: z.ZodType<T>;
+  validationLabel?: string;
   throwOnError?: boolean;
 }): Promise<T> {
   const provider = getActiveProvider();
 
+  const validateResult = (value: unknown): T => {
+    if (!opts.schema) {
+      return value as T;
+    }
+
+    return validateAIResponse(
+      opts.schema,
+      value,
+      opts.validationLabel ?? opts.tool.function.name,
+    );
+  };
+
   if (provider === 'groq') {
     try {
-      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+      const groq = new Groq({
+        apiKey: process.env.GROQ_API_KEY,
+      });
+
       const response = await groq.chat.completions.create({
         model: LLM_MODEL,
         max_tokens: 4096,
         messages: [
-          { role: 'system', content: opts.system },
-          { role: 'user', content: opts.userMessage },
+          {
+            role: 'system',
+            content: opts.system,
+          },
+          {
+            role: 'user',
+            content: opts.userMessage,
+          },
         ],
         tools: [opts.tool],
-        tool_choice: { type: 'function', function: { name: opts.tool.function.name } },
+        tool_choice: {
+          type: 'function',
+          function: {
+            name: opts.tool.function.name,
+          },
+        },
       });
 
       const message = response.choices[0]?.message;
       const toolCall = message?.tool_calls?.[0];
 
       if (toolCall && toolCall.type === 'function') {
-        return JSON.parse(toolCall.function.arguments) as T;
+        const rawResult: unknown = JSON.parse(
+          toolCall.function.arguments,
+        );
+
+        return validateResult(rawResult);
       }
+
+      throw new Error(
+        `Groq did not return the expected ${opts.tool.function.name} tool call.`,
+      );
     } catch (err) {
-      if (opts.throwOnError) throw err;
-      console.warn('[llm] Groq tool execution failed, using local fallback:', err);
+      // Invalid AI output must never be replaced by a fallback and persisted.
+      if (err instanceof InvalidAIResponseError) {
+        throw err;
+      }
+
+      if (opts.throwOnError) {
+        throw err;
+      }
+
+      console.warn(
+        '[llm] Groq tool execution failed, using local fallback:',
+        err,
+      );
     }
   } else if (provider === 'anthropic') {
     try {
-      const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+      const anthropic = new Anthropic({
+        apiKey: process.env.ANTHROPIC_API_KEY,
+      });
+
       const claudeTool = toClaudeTool(opts.tool);
+
       const response = await anthropic.messages.create({
-        model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
+        model:
+          process.env.CLAUDE_MODEL ||
+          'claude-sonnet-4-6',
         max_tokens: 4096,
         system: opts.system,
         tools: [claudeTool],
-        tool_choice: { type: 'tool', name: claudeTool.name },
-        messages: [{ role: 'user', content: opts.userMessage }],
+        tool_choice: {
+          type: 'tool',
+          name: claudeTool.name,
+        },
+        messages: [
+          {
+            role: 'user',
+            content: opts.userMessage,
+          },
+        ],
       });
 
-      const toolUse = response.content.find((b) => b.type === 'tool_use');
+      const toolUse = response.content.find(
+        (block) => block.type === 'tool_use',
+      );
+
       if (toolUse && toolUse.type === 'tool_use') {
-        return toolUse.input as T;
+        const rawResult: unknown = toolUse.input;
+
+        return validateResult(rawResult);
       }
+
+      throw new Error(
+        `Anthropic did not return the expected ${opts.tool.function.name} tool call.`,
+      );
     } catch (err) {
-      if (opts.throwOnError) throw err;
-      console.warn('[llm] Anthropic tool execution failed, using local fallback:', err);
+      // Invalid AI output must never be replaced by a fallback and persisted.
+      if (err instanceof InvalidAIResponseError) {
+        throw err;
+      }
+
+      if (opts.throwOnError) {
+        throw err;
+      }
+
+      console.warn(
+        '[llm] Anthropic tool execution failed, using local fallback:',
+        err,
+      );
     }
   }
 
   if (opts.throwOnError) {
-    throw new Error('LLM tool call did not return a valid result');
+    throw new Error(
+      'LLM tool call did not return a valid result',
+    );
   }
 
-  return getToolFallback<T>(opts.tool.function.name, opts.userMessage);
+  // Local fallback must satisfy the same schema as provider output.
+  const fallback = getToolFallback<T>(
+    opts.tool.function.name,
+    opts.userMessage,
+  );
+
+  return validateResult(fallback);
 }
 
 // ---------------------------------------------------------------------------
@@ -572,51 +667,59 @@ function getToolFallback<T>(toolName: string, userMessage: string): T {
   }
 
   if (toolName === 'generate_study_plan') {
+    const weeksMatch = userMessage.match(
+      /Preferred plan length:\s*(\d+)\s*weeks?/i,
+    );
+  
+    const requestedWeeks = Math.min(
+      12,
+      Math.max(
+        2,
+        weeksMatch ? Number(weeksMatch[1]) : 6,
+      ),
+    );
+  
+    const skillsMatch = userMessage.match(
+      /Target skills to close gaps on:\s*(.+?)\.\s*(?:\n|Preferred plan length:)/i,
+    );
+  
+    const targetSkills = skillsMatch
+      ? skillsMatch[1]
+          .split(',')
+          .map((skill) => skill.trim())
+          .filter(Boolean)
+      : ['General Skill Development'];
+  
+    const weeks = Array.from(
+      { length: requestedWeeks },
+      (_, index) => {
+        const weekNumber = index + 1;
+        const focusSkill =
+          targetSkills[index % targetSkills.length];
+  
+        return {
+          weekNumber,
+          focusSkill,
+          tasks: [
+            `Study the core concepts and best practices for ${focusSkill}`,
+            `Complete a practical exercise focused on ${focusSkill}`,
+            `Document what you learned and identify the next improvement area for ${focusSkill}`,
+          ],
+          resources: [
+            {
+              title: `${focusSkill} guided practice`,
+              type: 'practice' as const,
+            },
+          ],
+        };
+      },
+    );
+  
     return {
-      title: 'Targeted Skill Mastery Plan (4 Weeks)',
-      targetSkills: ['Cloud Infrastructure', 'CI/CD Pipelines', 'Database Optimization'],
-      weeks: [
-        {
-          weekNumber: 1,
-          focusSkill: 'Linux & Containerization Basics',
-          tasks: ['Learn essential Linux CLI commands', 'Containerize a Node.js/PostgreSQL application using Docker'],
-          resources: [
-            { title: 'Docker for Beginners Tutorial', type: 'video' },
-            { title: 'Official Docker Documentation', type: 'reading' },
-          ],
-        },
-        {
-          weekNumber: 2,
-          focusSkill: 'Database Performance & Indexing',
-          tasks: ['Practice SQL query profiling', 'Implement indexes and connection pooling on PostgreSQL'],
-          resources: [
-            { title: 'PostgreSQL Performance Optimization', type: 'practice' },
-          ],
-        },
-        {
-          weekNumber: 3,
-          focusSkill: 'API Architecture & Security',
-          tasks: ['Implement JWT authentication & RBAC', 'Structure clean RESTful endpoints'],
-          resources: [
-            { title: 'Modern Fullstack Patterns', type: 'course' },
-          ],
-        },
-        {
-          weekNumber: 4,
-          focusSkill: 'Automated CI/CD Workflows',
-          tasks: ['Configure GitHub Actions for automated linting and test runs', 'Deploy test build to cloud hosting'],
-          resources: [
-            { title: 'GitHub Actions DevOps Guide', type: 'practice' },
-          ],
-        },
-      ],
-      citations: [
-        {
-          source: 'CADT CS Curriculum',
-          reference: 'SWE 302',
-          claim: 'Curriculum alignment for practical software deployment workflows.',
-        },
-      ],
+      title: `Targeted Skill Mastery Plan (${requestedWeeks} Weeks)`,
+      targetSkills,
+      weeks,
+      citations: [],
     } as unknown as T;
   }
 
