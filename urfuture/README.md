@@ -43,8 +43,17 @@ EMBEDDING_PROVIDER="voyage"
 VOYAGE_API_KEY="pa-..."
 # OR for 100% free offline dev with zero API keys or rate limits:
 # EMBEDDING_PROVIDER="local"
+
+# 4. Storage (Google Cloud Storage) - Optional
+# If omitted, PDF files are not saved and only parsed course data is stored in Postgres.
+GCP_PROJECT_ID="your-gcp-project-id"
+GCS_TRANSCRIPT_BUCKET="your-gcs-bucket-name"
+
+# 5. Native PDF Layout Parsing (Anthropic) - Optional
+# If omitted, Groq will be used as a fallback to extract text from PDFs.
+ANTHROPIC_API_KEY="sk-ant-..."
 ```
-*(Google OAuth, Pinecone, and GCS buckets are **optional** for local development. Students sign in through the implemented authentication flow.)*
+*(Google OAuth and Pinecone are **optional** for local development. Students sign in through the implemented authentication flow via email/password or Google OAuth.)*
 ### 4. Start PostgreSQL with `pgvector`
 Ensure Docker Desktop is running, then run:
 ```bash
@@ -104,6 +113,7 @@ Open **[http://localhost:3000](http://localhost:3000)** in your browser:
 | `npm run type-check` | Run `tsc --noEmit` across entire codebase |
 | `npm run prisma:studio` | Visual browser for viewing database tables & reviews |
 | `npm run prisma:seed` | Re-seed default demo users, careers, and quiz questions |
+| `npm run test:e2e` | Run automated Playwright browser tests across user workflows |
 | `npx tsx scripts/seed-onet-data.ts` | Sync official O*NET-SOC careers and skill requirements |
 | `npm run rag:ingest` | Embed markdown/PDF documents from `data/knowledge` into `pgvector` |
 | `npm run verify:guardrails` | Run test suite verifying citations, groundedness (≥90%), and counselor escalation |

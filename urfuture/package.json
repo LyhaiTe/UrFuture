@@ -16,7 +16,8 @@
     "rag:ingest": "tsx scripts/ingest-knowledge.ts",
     "rag:ingest:dry-run": "tsx scripts/ingest-knowledge.ts --dry-run",
     "verify:guardrails": "tsx scripts/verify-guardrails.ts",
-    "measure:ttft": "tsx scripts/measure-chat-ttft.ts"
+    "measure:ttft": "tsx scripts/measure-chat-ttft.ts",
+    "test:e2e": "playwright test"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -40,6 +41,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^20.19.43",
     "@types/pdf-parse": "^1.1.4",
     "@types/react": "^18.3.3",

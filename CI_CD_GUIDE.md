@@ -20,22 +20,23 @@ flowchart TD
         G --> H[Live PostgreSQL + pgvector Service Container]
         H --> I[Prisma DB Push & Guardrails Verification Suite]
         I --> J[Next.js Production Build: npm run build]
+        J --> K[End-to-End Tests: npx playwright test]
     end
 
-    J --> K{Trigger Event?}
-    K -- Pull Request --> L[Job: Vercel Preview Deployment 🚀]
-    K -- Push to main --> M[Job: Vercel Production Deployment 🌐]
+    K --> L{Trigger Event?}
+    L -- Pull Request --> M[Job: Vercel Preview Deployment 🚀]
+    L -- Push to main --> N[Job: Vercel Production Deployment 🌐]
 
     subgraph Preview [Vercel Preview]
-        L --> L1[Vercel Pull & Build Preview]
-        L1 --> L2[Deploy Preview Instance]
-        L2 --> L3[Auto-comment Preview URL on Pull Request]
+        M --> M1[Vercel Pull & Build Preview]
+        M1 --> M2[Deploy Preview Instance]
+        M2 --> M3[Auto-comment Preview URL on Pull Request]
     end
 
     subgraph Production [Vercel Production]
-        M --> M1[Vercel Pull & Build Production]
-        M1 --> M2[Deploy to Production URL]
-        M2 --> M3[Post Deployment Step Summary]
+        N --> N1[Vercel Pull & Build Production]
+        N1 --> N2[Deploy to Production URL]
+        N2 --> N3[Post Deployment Step Summary]
     end
 ```
 
@@ -50,6 +51,7 @@ Runs on every Pull Request and Push to `main` and `dev-v2`.
 - **Type Safety**: Full TypeScript compilation check (`tsc --noEmit`).
 - **Database & RAG Integration**: Spawns an ephemeral `pgvector/pgvector:pg16` service container, synchronizes the database schema using Prisma, and executes the guardrails test suite (`verify-guardrails.ts`).
 - **Production Compilation**: Tests the complete Next.js production build (`next build`) to ensure zero packaging or prerendering regressions.
+- **End-to-End Testing**: Executes the full browser-based E2E suite via Playwright simulating the complete student journey (Signup -> Upload -> Parse -> Quiz -> Plan).
 
 ### 🚀 Preview Deployment (CD)
 Runs automatically when a Pull Request is opened or updated targeting `main` or `dev-v2`.
@@ -101,7 +103,7 @@ This will create a `.vercel/project.json` file containing:
    - `VERCEL_PROJECT_ID`: Your Project ID.
 
 > [!NOTE]
-> If these secrets are not yet added, the CI checks (Linting, TypeScript check, Prisma sync, guardrails tests, Next.js build) will still execute and pass cleanly, with a helpful notification logged during the deploy step.
+> If these secrets are not yet added, the CI checks (Linting, TypeScript check, Prisma sync, guardrails tests, Next.js build, and E2E tests) will still execute and pass cleanly, with a helpful notification logged during the deploy step.
 
 ---
 
@@ -112,8 +114,11 @@ In your [Vercel Dashboard](https://vercel.com) under **Project Settings > Enviro
 | Variable | Description |
 | :--- | :--- |
 | `DATABASE_URL` | Amazon RDS or hosted PostgreSQL URL with `pgvector` enabled |
-| `GROQ_API_KEY` | Groq API key for LLM inference |
+| `GROQ_API_KEY` | Groq API key for LLM inference (Chat, Quiz, Plan) |
 | `VOYAGE_API_KEY` | Voyage AI API key for embeddings |
+| `GCP_PROJECT_ID` | (Optional) Google Cloud Project ID for transcript storage |
+| `GCS_TRANSCRIPT_BUCKET` | (Optional) Google Cloud Storage Bucket Name |
+| `ANTHROPIC_API_KEY` | (Optional) Claude API key for PDF vision parsing |
 | `AUTH_SESSION_SECRET` | 32+ character random string for session tokens |
 | `GOOGLE_CLIENT_ID` | *(Optional)* Google OAuth Client ID |
 | `GOOGLE_CLIENT_SECRET` | *(Optional)* Google OAuth Client Secret |
@@ -124,7 +129,18 @@ Also ensure that under **Vercel Project Settings > General**:
 
 ---
 
-## 5. Local Scripts for CI Verification
+## 5. Outstanding External Setup for Production Launch
+
+Before calling the project launch-ready, verify the following external prerequisites:
+
+- [ ] **AI Providers**: Ensure billing is enabled for Groq (primary inference engine) and Voyage AI (embeddings). *Note: Anthropic Claude is strictly optional; the system falls back to Groq for text extraction if omitted.*
+- [ ] **Google Cloud Storage (GCS) (Optional)**: If you choose to persist raw transcript PDF uploads instead of just the extracted data, provision `GCS_TRANSCRIPT_BUCKET` with IAM permissions. *If omitted, the system elegantly bypasses storage.*
+- [ ] **O*NET Production Access**: The O*NET Web Services v2 API key is currently in development mode. Await staff approval to generate the production API key.
+- [ ] **Google OAuth (Optional)**: Configure the OAuth consent screen and production redirect URIs in Google Cloud Console if using real SSO.
+
+---
+
+## 6. Local Scripts for CI Verification
 
 You can run the exact verification checks locally before pushing:
 
@@ -142,4 +158,7 @@ npm run verify:guardrails
 
 # 4. Test production build
 npm run build
+
+# 5. Run full E2E Playwright test suite
+npm run test:e2e
 ```
