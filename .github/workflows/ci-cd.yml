@@ -111,6 +111,13 @@ jobs:
           NEXT_TELEMETRY_DISABLED: '1'
         run: npm run build
 
+      - name: 🎭 Run End-to-End browser tests (Playwright)
+        env:
+          DATABASE_URL: "postgresql://advisor:advisor@localhost:5432/urfuture?schema=public"
+          AUTH_SESSION_SECRET: "mock-session-secret-for-ci-testing-minimum-32-chars"
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: npx playwright install --with-deps && npx playwright test
+
   # =========================================================================
   # JOB 2: VERCEL PREVIEW DEPLOYMENT (Pull Requests)
   # =========================================================================
