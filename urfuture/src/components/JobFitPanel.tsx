@@ -65,6 +65,7 @@ const JOB_TITLES = [
   'Data Engineer',
   'Data Analyst',
   'Business Analyst',
+  'Data & Business Analyst',
   'Machine Learning Engineer',
   'AI Engineer',
   'DevOps Engineer',
@@ -279,7 +280,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
             onClick={() =>
               applySample(
                 'Junior Software Engineer',
-                'We are looking for a Junior Software Engineer named NUT SANNARA with knowledge of programming fundamentals, data structures, algorithms, SQL, database design, Git, automated testing, cloud deployment, and software development best practices.'
+                'We are hiring a Junior Software Engineer. Required skills include Intro to Computer Science, Data Structures & Algo I, Data Structures & Algo II, Software Architecture & Design, Software Testing & QA, Database Management Sys, DevOps & CI/CD Pipelines, and Cloud Computing Architecture. Professional experience deploying production applications is preferred.'
               )
             }
             className="px-3 py-1.5 rounded-lg border border-slate-600 bg-[#0f2137] text-xs text-slate-100 hover:border-cyan-500 hover:text-cyan-300 transition"
@@ -291,13 +292,13 @@ export default function JobFitPanel({ userId }: { userId: string }) {
             type="button"
             onClick={() =>
               applySample(
-                'Data & Business Analyst',
-                'Seeking a Data and Business Analyst with skills in SQL, database systems, data analysis, dashboards, business intelligence, communication, reporting, Excel, and analytical problem solving.'
+                'Frontend Developer',
+                'Seeking a Frontend Developer with strengths in Core Programming, Software Engineering, and Core Computer Science, supported by coursework in Introduction to Computer Science & Programming, Web Development & Frontend Architectures, and Data Structures & Algorithms. The role also requires strong Core Mathematics, including Calculus I & Analytical Geometry and Linear Algebra & Discrete Structures, plus React, TypeScript, and automated frontend testing.'
               )
             }
             className="px-3 py-1.5 rounded-lg border border-slate-600 bg-[#0f2137] text-xs text-slate-100 hover:border-cyan-500 hover:text-cyan-300 transition"
           >
-            Data & Business Analyst
+            Frontend Developer
           </button>
 
         </div>

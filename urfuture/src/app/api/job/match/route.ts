@@ -17,6 +17,7 @@ import {
   getStudentSkillContext,
   formatStudentSkillsForPrompt,
 } from '@/lib/knowledgeBase';
+import { buildJobFitAssessment } from '@/lib/jobFitSkills';
 import type { JobFitResult } from '@/types';
 import { getAuthenticatedStudent } from '@/lib/studentSession';
 
@@ -91,62 +92,25 @@ export async function POST(req: NextRequest) {
         validationLabel: 'job fit analysis',
       });
 
-    const proficiencyBySkill = new Map(
-      skills.map((skill) => [
-        skill.skill.name.toLowerCase(),
-        skill.proficiency,
-      ]),
+    const skillEvidence = skills.map((skill) => ({
+      name: skill.skill.name,
+      proficiency: skill.proficiency,
+      source: skill.source,
+    }));
+    const assessment = buildJobFitAssessment(
+      result.extractedSkills,
+      skillEvidence
     );
-
-    const toSkillGapItem = (
-      skillName: string,
-      matched: boolean,
-    ) => {
-      const userProficiency =
-        proficiencyBySkill.get(
-          skillName.toLowerCase(),
-        ) ?? 0;
-
-      const requiredImportance = 100;
-
-      return {
-        skillName,
-        userProficiency,
-        requiredImportance,
-        gap: matched
-          ? 0
-          : Math.max(
-              requiredImportance -
-                userProficiency,
-              0,
-            ),
-      };
-    };
 
     const normalizedResult = {
       jobTitle:
         result.jobTitle || jobTitle,
 
-      // Guaranteed to be 0-100 by jobFitSchema.
-      fitScore: result.fitScorePercent,
+      fitScore: assessment.fitScore,
 
-      matchedSkills:
-        result.matchedSkills.map(
-          (skillName) =>
-            toSkillGapItem(
-              skillName,
-              true,
-            ),
-        ),
+      matchedSkills: assessment.matchedSkills,
 
-      missingSkills:
-        result.missingSkills.map(
-          (skillName) =>
-            toSkillGapItem(
-              skillName,
-              false,
-            ),
-        ),
+      missingSkills: assessment.missingSkills,
 
       explanation: result.summary,
 
@@ -168,10 +132,8 @@ export async function POST(req: NextRequest) {
             jobDescription,
           extractedSkills:
             result.extractedSkills,
-          matchedCount:
-            result.matchedSkills.length,
-          totalRequired:
-            result.extractedSkills.length,
+          matchedCount: assessment.matchedSkills.length,
+          totalRequired: assessment.totalRequired,
           fitScorePercent:
             normalizedResult.fitScore,
         },
