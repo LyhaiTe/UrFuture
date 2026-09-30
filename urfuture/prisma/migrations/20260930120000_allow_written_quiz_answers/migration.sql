@@ -1,0 +1,2 @@
+ALTER TABLE "QuizAnswer"
+ALTER COLUMN "selectedIndex" DROP NOT NULL;

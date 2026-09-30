@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FileUp, Sparkles } from 'lucide-react';
 import QuizPanel from '@/components/QuizPanel';
 
@@ -27,6 +27,45 @@ export default function KnowledgeMapPanel({ userId }: { userId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSavedProfile() {
+      try {
+        const response = await fetch('/api/transcript/upload', {
+          method: 'GET',
+          cache: 'no-store',
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Could not load your saved transcripts.');
+        }
+
+        if (!cancelled) {
+          const savedCourses = Array.isArray(data.courses) ? data.courses : [];
+          setCourses(savedCourses);
+          setSkills(Array.isArray(data.skills) ? data.skills : savedCourses.map((course: Course) => ({
+            name: course.knowledgeArea || course.courseName || course.courseCode || 'Course knowledge',
+            proficiency: gradeToScore(course.grade),
+            source: 'TRANSCRIPT',
+          })));
+          setMajor(data.detectedMajor ?? null);
+        }
+      } catch (error_) {
+        if (!cancelled) {
+          setError(error_ instanceof Error ? error_.message : 'Could not load your saved transcripts.');
+        }
+      }
+    }
+
+    void loadSavedProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
   async function uploadTranscript() {
     if (!file) return;
     setBusy(true);
@@ -38,7 +77,7 @@ export default function KnowledgeMapPanel({ userId }: { userId: string }) {
       form.append('file', file);
       const response = await fetch('/api/transcript/upload', { method: 'POST', body: form });
       const responseText = await response.text();
-      let data: { error?: string; detail?: string; courses?: Course[]; detectedMajor?: string | null; transcript?: { parsedCourses?: Course[] } };
+      let data: { error?: string; detail?: string; courses?: Course[]; detectedMajor?: string | null; duplicate?: boolean; transcript?: { parsedCourses?: Course[] } };
       try {
         data = JSON.parse(responseText);
       } catch {
@@ -53,10 +92,13 @@ export default function KnowledgeMapPanel({ userId }: { userId: string }) {
         proficiency: gradeToScore(course.grade),
         source: 'TRANSCRIPT',
       })));
-      setMessage(`Parsed ${parsedCourses.length} course${parsedCourses.length === 1 ? '' : 's'} from ${file.name}.`);
+      const courseLabel = parsedCourses.length === 1 ? 'course' : 'courses';
+      setMessage(data.duplicate
+        ? `This transcript was already saved. Restored ${parsedCourses.length} ${courseLabel} from your profile.`
+        : `Parsed ${parsedCourses.length} ${courseLabel} from ${file.name}.`);
       setFile(null);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Transcript parsing failed');
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : 'Transcript parsing failed');
     } finally {
       setBusy(false);
     }

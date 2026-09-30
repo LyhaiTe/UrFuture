@@ -219,8 +219,7 @@ async function handlePost(req: NextRequest) {
 
       return {
         questionId: question.id,
-        selectedIndex:
-          answer.selectedIndex ?? -1,
+        selectedIndex: answer.selectedIndex,
         studentAnswer:
           answer.studentAnswer,
         isCorrect,
@@ -312,7 +311,11 @@ async function handlePost(req: NextRequest) {
             },
           });
         }
-      }
+      },
+      {
+        timeout: 20000,
+        maxWait: 20000,
+      },
     );
   } catch (error) {
     if (

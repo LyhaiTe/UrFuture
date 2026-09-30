@@ -52,6 +52,18 @@ async function main() {
       },
     });
 
+  const writtenQuestion =
+    await prisma.quizQuestion.create({
+      data: {
+        skillId: skill.id,
+        prompt: 'Contract written question',
+        choices: ['Correct'],
+        correctIndex: 0,
+        difficulty: 'BEGINNER',
+        questionType: 'WRITTEN',
+      },
+    });
+
   const outsideQuestion =
     await prisma.quizQuestion.create({
       data: {
@@ -85,6 +97,7 @@ async function main() {
           assignedQuestionIds: [
             question1.id,
             question2.id,
+            writtenQuestion.id,
           ],
         },
       });
@@ -145,6 +158,7 @@ async function main() {
           assignedQuestionIds: [
             question1.id,
             question2.id,
+            writtenQuestion.id,
           ],
         },
       });
@@ -205,6 +219,7 @@ async function main() {
           assignedQuestionIds: [
             question1.id,
             question2.id,
+            writtenQuestion.id,
           ],
         },
       });
@@ -217,6 +232,10 @@ async function main() {
       {
         questionId: question2.id,
         selectedIndex: 1,
+      },
+      {
+        questionId: writtenQuestion.id,
+        studentAnswer: 'Correct',
       },
     ];
 
@@ -255,8 +274,26 @@ async function main() {
 
     assert.equal(
       completedAttempt?.answers.length,
-      2,
-      'Both quiz answers must be stored'
+      3,
+      'All quiz answers must be stored'
+    );
+
+    const storedWrittenAnswer =
+      completedAttempt?.answers.find(
+        (answer) =>
+          answer.questionId ===
+          writtenQuestion.id
+      );
+
+    assert.equal(
+      storedWrittenAnswer?.selectedIndex,
+      null,
+      'Written answers must not store a choice index'
+    );
+    assert.equal(
+      storedWrittenAnswer?.studentAnswer,
+      'Correct',
+      'Written answers must be persisted'
     );
 
     console.log(
@@ -297,7 +334,7 @@ async function main() {
 
     assert.equal(
       afterReplay?.answers.length,
-      2,
+      3,
       'Replay must not create additional answers'
     );
 
@@ -322,6 +359,7 @@ async function main() {
           in: [
             question1.id,
             question2.id,
+            writtenQuestion.id,
             outsideQuestion.id,
           ],
         },

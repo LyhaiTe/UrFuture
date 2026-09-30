@@ -278,7 +278,7 @@ export default function DashboardWorkspace({
             </h3>
 
             <p className="mt-2 text-xs text-slate-700 dark:text-slate-200">
-              Add two interests to sharpen your recommendations.
+              Review your saved coursework and update your academic profile.
             </p>
 
               <button

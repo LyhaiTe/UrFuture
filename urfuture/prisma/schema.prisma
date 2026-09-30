@@ -277,7 +277,7 @@ model QuizAnswer {
   quizAttempt   QuizAttempt  @relation(fields: [quizAttemptId], references: [id], onDelete: Cascade)
   questionId    String
   question      QuizQuestion @relation(fields: [questionId], references: [id])
-  selectedIndex Int
+  selectedIndex Int?
   studentAnswer String?
   isCorrect     Boolean
   skillUpdate   Float?

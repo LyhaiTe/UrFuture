@@ -50,6 +50,91 @@ interface ParsedCourse {
  * Student identity is derived from the
  * verified server session.
  */
+export async function GET(req: NextRequest) {
+  try {
+    const student = await getAuthenticatedStudent(req);
+
+    if (!student) {
+      return NextResponse.json(
+        { error: 'Unauthenticated' },
+        { status: 401 }
+      );
+    }
+
+    const [transcripts, transcriptSkills, user] =
+      await Promise.all([
+        prisma.transcript.findMany({
+          where: {
+            userId: student.id,
+            status: 'PARSED',
+          },
+          orderBy: {
+            uploadedAt: 'asc',
+          },
+          select: {
+            id: true,
+            fileName: true,
+            yearLabel: true,
+            parsedCourses: true,
+            gpa: true,
+            parsedAt: true,
+          },
+        }),
+        prisma.userSkill.findMany({
+          where: {
+            userId: student.id,
+            source: 'TRANSCRIPT',
+          },
+          include: {
+            skill: {
+              select: {
+                name: true,
+              },
+            },
+          },
+          orderBy: {
+            skill: {
+              name: 'asc',
+            },
+          },
+        }),
+        prisma.user.findUnique({
+          where: {
+            id: student.id,
+          },
+          select: {
+            selectedMajor: {
+              select: {
+                title: true,
+              },
+            },
+          },
+        }),
+      ]);
+
+    return NextResponse.json({
+      transcripts,
+      courses: transcripts.flatMap((transcript) =>
+        Array.isArray(transcript.parsedCourses)
+          ? transcript.parsedCourses
+          : []
+      ),
+      skills: transcriptSkills.map((userSkill) => ({
+        name: userSkill.skill.name,
+        proficiency: userSkill.proficiency,
+        source: userSkill.source,
+      })),
+      detectedMajor: user?.selectedMajor?.title ?? null,
+    });
+  } catch (error) {
+    console.error('Could not load saved transcripts:', error);
+    return NextResponse.json(
+      { error: 'Could not load saved transcripts' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(
   req: NextRequest
 ) {
@@ -207,14 +292,33 @@ export async function POST(
         },
         select: {
           id: true,
+          fileName: true,
+          status: true,
+          yearLabel: true,
+          parsedCourses: true,
+          gpa: true,
+          parsedAt: true,
         },
       });
 
     if (duplicate) {
+      if (duplicate.status === 'PARSED') {
+        return NextResponse.json({
+          transcript: duplicate,
+          courses: Array.isArray(duplicate.parsedCourses)
+            ? duplicate.parsedCourses
+            : [],
+          detectedMajor: null,
+          duplicate: true,
+        });
+      }
+
       return NextResponse.json(
         {
           error:
-            'This transcript has already been uploaded',
+            duplicate.status === 'PARSING'
+              ? 'This transcript is already being processed. Please wait and refresh your profile.'
+              : 'This transcript was already uploaded but could not be parsed. Please upload a clearer copy.',
           transcriptId: duplicate.id,
         },
         { status: 409 }
