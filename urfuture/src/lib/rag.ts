@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { embedText, toVectorLiteral } from '@/lib/embeddings';
+import { embedText, embedTexts, toVectorLiteral } from '@/lib/embeddings';
 import type { GroundingCitation } from '@/types';
 
 export interface RetrievedChunk {
@@ -35,35 +35,25 @@ interface RawChunkRow {
   source: string;
 }
 
-/**
- * Core retrieval primitive for the RAG pipeline. Embeds `query`, runs a
- * pgvector cosine-distance search over KnowledgeChunk (optionally filtered
- * by KnowledgeDocument.category), and returns both the raw chunks and a
- * prompt-ready context block + citation array.
- *
- * Cosine distance in pgvector (`<=>`) ranges 0 (identical) to 2 (opposite);
- * `1 - distance` converts that to a similarity score in roughly [-1, 1],
- * matching the "1 - (embedding <=> $1) AS similarity" convention used
- * throughout the RAG spec.
- */
-export async function retrieveRelevantContext(
-  query: string,
+type RetrievalResult = {
+  contextText: string;
+  citations: GroundingCitation[];
+  chunks: RetrievedChunk[];
+};
+
+function emptyRetrievalResult(): RetrievalResult {
+  return { contextText: '', citations: [], chunks: [] };
+}
+
+async function retrieveWithEmbedding(
+  queryEmbedding: number[],
   options?: RetrievalOptions
-): Promise<{ contextText: string; citations: GroundingCitation[]; chunks: RetrievedChunk[] }> {
+): Promise<RetrievalResult> {
   const limit = options?.limit ?? DEFAULT_TOP_K;
   const threshold = options?.threshold ?? DEFAULT_THRESHOLD;
 
-  if (!query.trim()) {
-    return { contextText: '', citations: [], chunks: [] };
-  }
-
   try {
-    const queryEmbedding = await embedText(query);
     const vectorLiteral = toVectorLiteral(queryEmbedding);
-
-    // $queryRawUnsafe is used only to interpolate the category filter clause
-    // (a fixed, code-controlled string, never user input); all actual values
-    // — the vector literal and limit — are still bound as parameters.
     const categoryClause = options?.category ? `AND d.category = $3::"KnowledgeCategory"` : '';
 
     const rows = await prisma.$queryRawUnsafe<RawChunkRow[]>(
@@ -100,20 +90,46 @@ export async function retrieveRelevantContext(
         metadata: (r.metadata as Record<string, unknown>) ?? {},
       }));
 
-    const contextText = formatChunksForPrompt(chunks);
-    const citations: GroundingCitation[] = chunks.map((c) => ({
-      source: c.source,
-      reference: `${c.title} (chunk ${c.id})`,
-      claim: c.content.slice(0, 160).trim() + (c.content.length > 160 ? '…' : ''),
-    }));
-
-    return { contextText, citations, chunks };
+    return {
+      contextText: formatChunksForPrompt(chunks),
+      citations: chunks.map((c) => ({
+        source: c.source,
+        reference: `${c.title} (chunk ${c.id})`,
+        claim: c.content.slice(0, 160).trim() + (c.content.length > 160 ? '…' : ''),
+      })),
+      chunks,
+    };
   } catch (err) {
-    // Retrieval must never take the whole request down — if the embedding
-    // provider is unreachable/misconfigured, or pgvector / KnowledgeChunk
-    // table hasn't been migrated yet, fall back cleanly to empty context.
     console.warn('[rag] Context retrieval failed, continuing without RAG:', err instanceof Error ? err.message : err);
-    return { contextText: '', citations: [], chunks: [] };
+    return emptyRetrievalResult();
+  }
+}
+
+/**
+ * Core retrieval primitive for the RAG pipeline. Embeds `query`, runs a
+ * pgvector cosine-distance search over KnowledgeChunk (optionally filtered
+ * by KnowledgeDocument.category), and returns both the raw chunks and a
+ * prompt-ready context block + citation array.
+ *
+ * Cosine distance in pgvector (`<=>`) ranges 0 (identical) to 2 (opposite);
+ * `1 - distance` converts that to a similarity score in roughly [-1, 1],
+ * matching the "1 - (embedding <=> $1) AS similarity" convention used
+ * throughout the RAG spec.
+ */
+export async function retrieveRelevantContext(
+  query: string,
+  options?: RetrievalOptions
+): Promise<{ contextText: string; citations: GroundingCitation[]; chunks: RetrievedChunk[] }> {
+  if (!query.trim()) {
+    return emptyRetrievalResult();
+  }
+
+  try {
+    const queryEmbedding = await embedText(query);
+    return retrieveWithEmbedding(queryEmbedding, options);
+  } catch (err) {
+    console.warn('[rag] Context retrieval failed, continuing without RAG:', err instanceof Error ? err.message : err);
+    return emptyRetrievalResult();
   }
 }
 
@@ -138,7 +154,20 @@ export async function retrieveRelevantContextForMany(
   queries: string[],
   options?: RetrievalOptions
 ): Promise<{ contextText: string; citations: GroundingCitation[]; chunks: RetrievedChunk[] }> {
-  const results = await Promise.all(queries.map((q) => retrieveRelevantContext(q, options)));
+  const uniqueQueries = [...new Set(queries.map((query) => query.trim()).filter(Boolean))];
+  if (uniqueQueries.length === 0) return emptyRetrievalResult();
+
+  let queryEmbeddings: number[][];
+  try {
+    queryEmbeddings = await embedTexts(uniqueQueries);
+  } catch (err) {
+    console.warn('[rag] Context retrieval failed, continuing without RAG:', err instanceof Error ? err.message : err);
+    return emptyRetrievalResult();
+  }
+
+  const results = await Promise.all(
+    queryEmbeddings.map((embedding) => retrieveWithEmbedding(embedding, options))
+  );
   const byId = new Map<string, RetrievedChunk>();
   for (const r of results) {
     for (const chunk of r.chunks) {
