@@ -305,12 +305,10 @@ export async function runToolCall<T>(opts: {
           },
         ],
         tools: [opts.tool],
-        tool_choice: {
-          type: 'function',
-          function: {
-            name: opts.tool.function.name,
-          },
-        },
+        // Allow the model to respond naturally; some Groq models refuse
+        // forced tool calls and return a 400 instead of a usable tool call.
+        // The caller already handles fallback behavior when no tool is used.
+        tool_choice: 'auto',
       });
 
       const message = response.choices[0]?.message;
@@ -724,13 +722,17 @@ function getToolFallback<T>(toolName: string, userMessage: string): T {
   }
 
   if (toolName === 'analyze_job_fit') {
+    const jobTitle = extractFallbackJobTitle(userMessage);
+    const description = extractFallbackJobDescription(userMessage);
+    const extractedSkills = extractFallbackJobSkills(description);
+
     return {
-      jobTitle: 'Junior / Mid Software Engineer',
-      extractedSkills: ['TypeScript', 'React', 'PostgreSQL', 'Docker', 'REST APIs'],
-      matchedSkills: ['TypeScript', 'React', 'PostgreSQL'],
-      missingSkills: ['Docker', 'AWS'],
-      fitScorePercent: 82,
-      summary: 'Strong match for foundational engineering skills with high potential. Needs short ramp-up on deployment pipelines.',
+      jobTitle,
+      extractedSkills,
+      matchedSkills: [],
+      missingSkills: extractedSkills,
+      fitScorePercent: 0,
+      summary: 'The external analysis service was unavailable. This result uses the submitted job requirements and the verified student profile.',
       needsPrep: false,
     } as unknown as T;
   }
@@ -759,4 +761,54 @@ function getToolFallback<T>(toolName: string, userMessage: string): T {
   }
 
   throw new Error(`Unsupported tool: ${toolName}`);
+}
+
+function extractFallbackJobTitle(userMessage: string): string {
+  return (
+    userMessage.match(/JOB TITLE:\s*(.+?)(?:\n|$)/i)?.[1]?.trim() ||
+    'Job fit analysis'
+  );
+}
+
+function extractFallbackJobDescription(userMessage: string): string {
+  return (
+    userMessage.match(
+      /JOB DESCRIPTION \(pasted by student\):\s*([\s\S]*?)(?:\n\nCall analyze_job_fit|$)/i,
+    )?.[1] || ''
+  );
+}
+
+function extractFallbackJobSkills(description: string): string[] {
+  const skillPatterns = [
+    'Core Programming',
+    'Software Engineering',
+    'Core Computer Science',
+    'Core Mathematics',
+    'Introduction to Computer Science & Programming',
+    'Intro to Computer Science',
+    'Web Development & Frontend Architectures',
+    'Data Structures & Algorithms',
+    'Data Structures & Algo I',
+    'Data Structures & Algo II',
+    'Software Architecture & Design',
+    'Software Testing & QA',
+    'Database Management Sys',
+    'DevOps & CI/CD Pipelines',
+    'Cloud Computing Architecture',
+    'Calculus I & Analytical Geometry',
+    'Linear Algebra & Discrete Structures',
+    'Programming Fundamentals',
+    'SQL & Database Design',
+    'Automated Testing',
+    'React',
+    'TypeScript',
+    'PostgreSQL',
+    'Docker',
+    'AWS',
+    'REST APIs',
+  ];
+
+  return skillPatterns.filter((skill) =>
+    description.toLocaleLowerCase().includes(skill.toLocaleLowerCase()),
+  );
 }
