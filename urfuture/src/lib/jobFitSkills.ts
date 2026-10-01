@@ -19,12 +19,12 @@ export interface JobFitAssessment {
 }
 
 export function buildJobFitAssessment(
-  requiredSkillNames: string[],
+  skillRequirements: { skillName: string; requiredProficiency: number }[],
   skills: StudentSkillEvidence[]
 ): JobFitAssessment {
   const seenNames = new Set<string>();
-  const uniqueSkillNames = requiredSkillNames.filter((skillName) => {
-    const normalizedName = normalizeSkillName(skillName);
+  const uniqueRequirements = skillRequirements.filter((requirement) => {
+    const normalizedName = normalizeSkillName(requirement.skillName);
 
     if (!normalizedName || seenNames.has(normalizedName)) {
       return false;
@@ -34,16 +34,15 @@ export function buildJobFitAssessment(
     return true;
   });
 
-  const skillItems = uniqueSkillNames.map((skillName) => {
+  const skillItems = uniqueRequirements.map(({ skillName, requiredProficiency }) => {
     const userProficiency =
       resolveStudentSkillProficiency(skillName, skills) ?? 0;
-    const requiredImportance = 100;
 
     return {
       skillName,
       userProficiency,
-      requiredImportance,
-      gap: Math.max(requiredImportance - userProficiency, 0),
+      requiredImportance: requiredProficiency,
+      gap: Math.max(requiredProficiency - userProficiency, 0),
     };
   });
 
@@ -52,7 +51,8 @@ export function buildJobFitAssessment(
       skillItems.length === 0
         ? 0
         : skillItems.reduce(
-            (total, skill) => total + skill.userProficiency,
+            (total, skill) =>
+              total + Math.min(skill.userProficiency / skill.requiredImportance, 1) * 100,
             0
           ) / skillItems.length,
     matchedSkills: skillItems.filter((skill) => skill.gap === 0),

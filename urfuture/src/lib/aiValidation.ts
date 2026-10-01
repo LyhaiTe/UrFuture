@@ -28,6 +28,10 @@ export const skillGapAnalysisSchema = z.object({
 export const jobFitSchema = z.object({
   jobTitle: z.string().trim().min(1),
   extractedSkills: z.array(z.string().trim().min(1)),
+  skillRequirements: z.array(z.object({
+    skillName: z.string().trim().min(1),
+    requiredProficiency: z.number().min(1).max(100),
+  })).min(1),
   matchedSkills: z.array(z.string().trim().min(1)),
   missingSkills: z.array(z.string().trim().min(1)),
   fitScorePercent: z.number().min(0).max(100),

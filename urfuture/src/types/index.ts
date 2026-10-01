@@ -51,6 +51,10 @@ export interface StudyPlanResult {
 export interface JobFitResult {
   jobTitle: string;
   extractedSkills: string[];
+  skillRequirements: {
+    skillName: string;
+    requiredProficiency: number;
+  }[];
   matchedSkills: string[];
   missingSkills: string[];
   fitScorePercent: number;

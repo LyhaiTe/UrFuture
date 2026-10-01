@@ -178,13 +178,24 @@ export const ANALYZE_JOB_FIT_TOOL: LLMTool = {
       properties: {
         jobTitle: { type: 'string' },
         extractedSkills: { type: 'array', items: { type: 'string' } },
+        skillRequirements: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              skillName: { type: 'string' },
+              requiredProficiency: { type: 'number' },
+            },
+            required: ['skillName', 'requiredProficiency'],
+          },
+        },
         matchedSkills: { type: 'array', items: { type: 'string' } },
         missingSkills: { type: 'array', items: { type: 'string' } },
         fitScorePercent: { type: 'number' },
         summary: { type: 'string' },
         needsPrep: { type: 'boolean' },
       },
-      required: ['jobTitle', 'extractedSkills', 'matchedSkills', 'missingSkills', 'fitScorePercent', 'summary', 'needsPrep'],
+      required: ['jobTitle', 'extractedSkills', 'skillRequirements', 'matchedSkills', 'missingSkills', 'fitScorePercent', 'summary', 'needsPrep'],
     },
   },
 };
@@ -729,6 +740,10 @@ function getToolFallback<T>(toolName: string, userMessage: string): T {
     return {
       jobTitle,
       extractedSkills,
+      skillRequirements: extractedSkills.map((skillName) => ({
+        skillName,
+        requiredProficiency: 70,
+      })),
       matchedSkills: [],
       missingSkills: extractedSkills,
       fitScorePercent: 0,

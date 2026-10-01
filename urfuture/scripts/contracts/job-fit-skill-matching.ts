@@ -60,7 +60,13 @@ assert.equal(
 );
 
 const consistentAssessment = buildJobFitAssessment(
-  ['Data Structures', 'SQL', 'Docker', 'AWS', 'TypeScript'],
+  [
+    { skillName: 'Data Structures', requiredProficiency: 80 },
+    { skillName: 'SQL', requiredProficiency: 80 },
+    { skillName: 'Docker', requiredProficiency: 75 },
+    { skillName: 'AWS', requiredProficiency: 70 },
+    { skillName: 'TypeScript', requiredProficiency: 60 },
+  ],
   [
     { name: 'Data Structures', proficiency: 100, source: 'QUIZ' },
     { name: 'SQL', proficiency: 100, source: 'QUIZ' },
@@ -70,13 +76,22 @@ const consistentAssessment = buildJobFitAssessment(
   ]
 );
 
-assert.equal(consistentAssessment.fitScore, 82);
+assert.equal(consistentAssessment.fitScore, 83.33333333333334);
 assert.equal(consistentAssessment.matchedSkills.length, 4);
 assert.equal(consistentAssessment.missingSkills.length, 1);
-assert.equal(consistentAssessment.missingSkills[0].gap, 90);
+assert.equal(consistentAssessment.missingSkills[0].gap, 50);
+
+const demonstratedSkillAssessment = buildJobFitAssessment(
+  [{ skillName: 'Frontend Development', requiredProficiency: 80 }],
+  [{ name: 'Frontend Development', proficiency: 92, source: 'TRANSCRIPT' }]
+);
+
+assert.equal(demonstratedSkillAssessment.fitScore, 100);
+assert.equal(demonstratedSkillAssessment.matchedSkills.length, 1);
+assert.equal(demonstratedSkillAssessment.missingSkills.length, 0);
 
 const zeroProficiencyAssessment = buildJobFitAssessment(
-  ['Data Structures & Algorithms'],
+  [{ skillName: 'Data Structures & Algorithms', requiredProficiency: 100 }],
   [
     {
       name: 'Data Structures & Algorithms',

@@ -112,7 +112,13 @@ institution/dataset).`;
 
 export const JOB_FIT_FUNCTION_INSTRUCTIONS = `When asked to compare a student against a pasted job description, you MUST
 call the "analyze_job_fit" tool. Extract skills conservatively — only list a
-skill as "required" if the job description text actually implies it.`;
+skill as "required" if the job description text actually implies it. A skill
+may be listed as matched only when it is supported by the student's skill
+profile, and use the profile's skill name when possible. For every extracted
+skill, return a skillRequirements entry with its skillName and a realistic
+requiredProficiency from 1 to 100. Estimate the proficiency needed from the
+role seniority and wording; do not default every skill to 100. When the
+description gives no level, use 70 for working proficiency.`;
 
 export const QUIZ_GENERATION_INSTRUCTIONS = `When asked to build a diagnostic quiz from uploaded transcripts, you MUST
 call the "generate_quiz" tool. Follow these rules strictly:

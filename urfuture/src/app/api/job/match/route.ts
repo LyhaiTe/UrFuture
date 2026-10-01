@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
       source: skill.source,
     }));
     const assessment = buildJobFitAssessment(
-      result.extractedSkills,
+      result.skillRequirements,
       skillEvidence
     );
 
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
           jobDescriptionRaw:
             jobDescription,
           extractedSkills:
-            result.extractedSkills,
+            result.skillRequirements.map((requirement) => requirement.skillName),
           matchedCount: assessment.matchedSkills.length,
           totalRequired: assessment.totalRequired,
           fitScorePercent:

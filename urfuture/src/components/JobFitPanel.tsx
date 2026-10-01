@@ -621,7 +621,7 @@ export default function JobFitPanel({ userId }: { userId: string }) {
                           <p className="text-[10px] text-slate-500 mt-1">
                             Current {Math.round(skill.userProficiency)}%
                             {' • '}
-                            Required {Math.round(skill.requiredImportance)}%
+                            Target {Math.round(skill.requiredImportance)}%
                           </p>
 
                         </div>

@@ -138,13 +138,24 @@ export const ANALYZE_JOB_FIT_TOOL: Tool = {
     properties: {
       jobTitle: { type: 'string' },
       extractedSkills: { type: 'array', items: { type: 'string' } },
+      skillRequirements: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            skillName: { type: 'string' },
+            requiredProficiency: { type: 'number' },
+          },
+          required: ['skillName', 'requiredProficiency'],
+        },
+      },
       matchedSkills: { type: 'array', items: { type: 'string' } },
       missingSkills: { type: 'array', items: { type: 'string' } },
       fitScorePercent: { type: 'number' },
       summary: { type: 'string' },
       needsPrep: { type: 'boolean' },
     },
-    required: ['jobTitle', 'extractedSkills', 'matchedSkills', 'missingSkills', 'fitScorePercent', 'summary', 'needsPrep'],
+    required: ['jobTitle', 'extractedSkills', 'skillRequirements', 'matchedSkills', 'missingSkills', 'fitScorePercent', 'summary', 'needsPrep'],
   },
 };
 
