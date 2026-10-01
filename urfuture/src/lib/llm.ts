@@ -533,14 +533,16 @@ export async function* streamChat(opts: {
       yield* streamGroq(opts);
       return;
     } catch (err) {
-      console.warn('[llm] Groq stream encountered error, falling back to dev responder:', err);
+      console.error('[llm] Groq stream failed:', err);
+      throw new Error('The chat provider is temporarily unavailable. Check its API key or quota, then try again.');
     }
   } else if (provider === 'anthropic') {
     try {
       yield* streamClaude(opts);
       return;
     } catch (err) {
-      console.warn('[llm] Anthropic stream encountered error, falling back to dev responder:', err);
+      console.error('[llm] Anthropic stream failed:', err);
+      throw new Error('The chat provider is temporarily unavailable. Check its API key or quota, then try again.');
     }
   }
 

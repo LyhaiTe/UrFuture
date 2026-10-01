@@ -117,10 +117,10 @@ export async function POST(req: NextRequest) {
       conversationId,
     },
     orderBy: {
-      createdAt: 'asc',
+      createdAt: 'desc',
     },
     take: 20,
-  });
+  }).then((messages) => messages.reverse());
 
   // Check for high-stakes signal.
   const highStakes =
